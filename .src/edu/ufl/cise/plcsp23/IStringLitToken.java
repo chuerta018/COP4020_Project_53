@@ -8,12 +8,11 @@
  * This code may not be posted on a public web site either during or after the course.  
  */
 
-package ufl.cise.plcsp23;
 
-@SuppressWarnings("serial")
-public class LexicalException extends PLCException {
+package edu.ufl.cise.plcsp23;
 
-	public LexicalException(String message) {
-		super(message);
-	}
+public interface IStringLitToken extends IToken {
+	
+	String getValue();
+
 }

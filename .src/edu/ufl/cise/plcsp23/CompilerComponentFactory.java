@@ -8,7 +8,7 @@
  * This code may not be posted on a public web site either during or after the course.  
  */
 
-package ufl.cise.plcsp23;
+package edu.ufl.cise.plcsp23;
 
 public class CompilerComponentFactory {
 	public static IScanner makeScanner(String input) {

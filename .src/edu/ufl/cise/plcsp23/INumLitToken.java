@@ -8,11 +8,10 @@
  * This code may not be posted on a public web site either during or after the course.  
  */
 
+package edu.ufl.cise.plcsp23;
 
-package ufl.cise.plcsp23;
+public interface INumLitToken extends IToken {
 
-public interface IStringLitToken extends IToken {
-	
-	String getValue();
+	int getValue();
 
 }

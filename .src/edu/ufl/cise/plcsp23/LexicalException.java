@@ -8,12 +8,12 @@
  * This code may not be posted on a public web site either during or after the course.  
  */
 
-package ufl.cise.plcsp23;
+package edu.ufl.cise.plcsp23;
 
-public class PLCException extends Exception {
+@SuppressWarnings("serial")
+public class LexicalException extends PLCException {
 
-	public PLCException(String message) {
+	public LexicalException(String message) {
 		super(message);
 	}
-
 }

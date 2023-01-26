@@ -9,7 +9,7 @@
  */
 
 
-package ufl.cise.plcsp23;
+package edu.ufl.cise.plcsp23;
 
 public interface IToken {
 	/** 

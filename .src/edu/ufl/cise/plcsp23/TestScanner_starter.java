@@ -8,7 +8,7 @@
  * This code may not be posted on a public web site either during or after the course.  
  */
 
-package ufl.cise.plcsp23;
+package edu.ufl.cise.plcsp23;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;

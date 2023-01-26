@@ -8,16 +8,12 @@
  * This code may not be posted on a public web site either during or after the course.  
  */
 
-package ufl.cise.plcsp23;
+package edu.ufl.cise.plcsp23;
 
-public interface IScanner {
-	/**
-	 * Return an IToken and advance the internal position so that subsequent calls
-	 * will return subsequent ITokens.
-	 * 
-	 * @return
-	 * @throws LexicalException
-	 */
-	IToken next() throws LexicalException;
+public class PLCException extends Exception {
+
+	public PLCException(String message) {
+		super(message);
+	}
 
 }
