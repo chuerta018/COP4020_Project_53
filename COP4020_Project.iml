@@ -7,14 +7,5 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="module-library" exported="">
-      <library>
-        <CLASSES />
-        <JAVADOC />
-        <SOURCES>
-          <root url="jar://$USER_HOME$/Downloads/HW1_provided.jar!/" />
-        </SOURCES>
-      </library>
-    </orderEntry>
   </component>
 </module>
