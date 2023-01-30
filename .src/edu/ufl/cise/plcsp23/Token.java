@@ -1,37 +1,52 @@
 package edu.ufl.cise.plcsp23;
 
-public class Token {
-	// Record to represent the location in the source code
-	public record SourceLocation(int line, int column) {}
-	public static enum Kind {
-	  IDENT,
-	  NUM_LIT,
-	  PLUS,
-	  TIMES,
-	  EQ,
-	  KW_IF,
-	  KW_ELSE,
-	  EOF,
-	  ERROR //may be useful
-	}
-	final Kind kind;
-	final int pos;
-	final int length;
-	final char[] source;
-	
-	//constructor initializes final fields
-	public Token(Kind kind, int pos, int length, char[] source) {
-	  super();
-	  this.kind = kind;
-	  this.pos = pos;
-	  this.length = length;
-	  this.source = source;
-	}
-	public SourceLocation getSourceLocation() {...}
-	public Kind getKind() {return kind;}
-	//returns the characters from the source belonging to the token
-	public String getTokenString() {...}  
-	//prints token, used during development
-	@Override  public String toString() {...}
-	
+import javax.xml.transform.Source;
+
+public class Token implements IToken
+{
+    //Create fundamentals variables of a token definition
+    final Kind kind;
+    final int pos;
+    final int length;
+    final char[] source;
+
+    //===== Constructor =====//
+    public Token (Kind _kind, int _pos, int _length, char[] _source)
+    {
+        super(); // idk what this does tbh // ima watch lecture
+        kind = _kind;
+        pos = _pos;
+        length = _length;
+        source = _source;
+
+    }
+
+    public SourceLocation getSourceLocation()
+    {
+        //wrong I need to figure out how to get line, pos is the colomun
+    SourceLocation sourceLocation = new SourceLocation(pos,pos);
+    return sourceLocation;
+
+    }
+
+    public Kind getKind()
+    {
+        return kind;
+    }
+
+    public String getTokenString()
+    {
+        String tokenString = "";
+        int j = pos;
+        for( int i = 0; i<length ; i++)
+        {
+            tokenString += source[j];
+            j++;
+        }
+
+        return tokenString;
+
+    }
+
+
 }
