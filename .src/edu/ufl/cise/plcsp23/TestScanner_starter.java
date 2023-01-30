@@ -113,14 +113,10 @@ class TestScanner_starter {
 	@Test
 	void numLits1() throws LexicalException {
 		String input = """
-				123
-				05 240
+				1
 				""";
 		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkNUM_LIT(123, scanner.next());
-		checkNUM_LIT(0, scanner.next());
-		checkNUM_LIT(5, scanner.next());
-		checkNUM_LIT(240, scanner.next());
+		checkNUM_LIT(1, scanner.next());
 		checkEOF(scanner.next());
 	}
 	

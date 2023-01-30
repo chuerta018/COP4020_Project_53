@@ -29,7 +29,7 @@ public class Scanner implements IScanner
     @Override
     public Token next() throws LexicalException
     {
-    	
+    	return scanToken();
     }
 
     private enum State {
@@ -199,7 +199,7 @@ public class Scanner implements IScanner
                     }
                     else {
                         state = state.START;
-                        nextChar();
+                        
                         return new Token(GT, tokenStart, 1, inputChars);
                     }
 
@@ -214,20 +214,27 @@ public class Scanner implements IScanner
                     }
                     else if (ch == '-')
                     {
-                        char temp = inputChars[pos++];
+                        nextChar();
 
-                        if(temp == '>')// === this case is '<->' === //
+                        if(ch == '>')// === this case is '<->' === //
                         {
                             state = state.START;
                             nextChar();
                             return new Token(EXCHANGE, tokenStart, 3, inputChars);
                         }
                         else { // === this case is '<' === //
-                            pos--;// not sure if the pos++ in the array brackets permanently increases the pos variable or temporarily.
+                            // not sure if the pos++ in the array brackets permanently increases the pos variable or temporarily.
                             state = state.START;
-                            nextChar();
+                            pos--;
+                            ch = inputChars[pos];
                             return new Token(IToken.Kind.LT, tokenStart, 1, inputChars);
                         }
+                    }
+                    else { // === this case is '<' === //
+                        // not sure if the pos++ in the array brackets permanently increases the pos variable or temporarily.
+                        state = state.START;
+                        
+                        return new Token(IToken.Kind.LT, tokenStart, 1, inputChars);
                     }
                 }
                 case HAVE_AND -> {
@@ -270,12 +277,13 @@ public class Scanner implements IScanner
 
                 }
                 case IN_NUM_LIT -> {
-                    if (isDigit(ch)) {//char is digit, continue in IN_NUM_LIT state
+                    if (isDigit(Character.getNumericValue(ch))) {//char is digit, continue in IN_NUM_LIT state
                         nextChar();
                     }
                     else {
                         //current char belongs to next token, so don't get next char
                         int length = pos-tokenStart;
+                        
                         return new Token(IToken.Kind.NUM_LIT, tokenStart, length, inputChars);
                     }
 
@@ -319,9 +327,6 @@ public class Scanner implements IScanner
                 case IN_COMMENT_LIT -> {
                 	if (isInput_Char(ch)) {
                 		nextChar();
-                	}
-                	else {
-                		error("Not a valid string Token/Or does not satisfy token");
                 	}
                 }
                 default -> {
@@ -370,7 +375,7 @@ public class Scanner implements IScanner
 
     }
     private boolean isDigit(int ch) {
-        return '0' <= ch && ch <= '9';
+        return 0 <= ch && ch <= 9;
     }
     private boolean isLetter(int ch) {
         return ('A' <= ch && ch <= 'Z') || ('a' <= ch && ch <= 'z');
