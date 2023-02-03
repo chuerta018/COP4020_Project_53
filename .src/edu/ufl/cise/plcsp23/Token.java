@@ -7,15 +7,17 @@ public class Token implements IToken
     //Create fundamentals variables of a token definition
     final Kind kind;
     final int pos;
+    final int row;
     final int length;
     final char[] source;
 
     //===== Constructor =====//
-    public Token (Kind _kind, int _pos, int _length, char[] _source)
+    public Token (Kind _kind, int _row, int _pos, int _length, char[] _source)
     {
         super(); // idk what this does tbh // ima watch lecture
         kind = _kind;
         pos = _pos;
+        row = _row;
         length = _length;
         source = _source;
 
@@ -24,7 +26,7 @@ public class Token implements IToken
     public SourceLocation getSourceLocation()
     {
         //wrong I need to figure out how to get line, pos is the colomun
-    SourceLocation sourceLocation = new SourceLocation(pos,pos);
+    SourceLocation sourceLocation = new SourceLocation(row,pos);
     return sourceLocation;
 
     }
