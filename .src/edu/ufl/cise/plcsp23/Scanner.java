@@ -229,7 +229,7 @@ public class Scanner implements IScanner
                             state = state.START;
                             pos--;
                             ch = inputChars[pos];
-                            error("Not a valid string Token/Or does not satisfy token");
+                            error("Not a valid Exchange token");
                             //return new Token(IToken.Kind.LT, tokenStart, 1, inputChars);
                         }
                     }
@@ -283,7 +283,7 @@ public class Scanner implements IScanner
                     if (isDigit(Character.getNumericValue(ch))) {//char is digit, continue in IN_NUM_LIT state
                         nextChar();
                         count++;
-                        if (count >= 20) {
+                        if (count >= 20) { // this is wrong tbh, we need to use Integer.parseInt  if it passes its valid if it does not, then we catch the Integer.parseInt exeception error and throw a lexical error.
                         	error("Number is too large.");
                         }
                     }
@@ -392,6 +392,9 @@ public class Scanner implements IScanner
 
     private boolean isEscapeSeq(int ch)
     {
+        if(ch == '\n')
+            row++;
+
         return (ch == '\b') || (ch == '\t') || (ch == '\n') || (ch == '\"') || (ch == '\\');
     }
 
