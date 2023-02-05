@@ -1,35 +1,29 @@
 package edu.ufl.cise.plcsp23;
 
-import javax.xml.transform.Source;
+public class NumLitToken implements INumLitToken{
 
-public class Token implements IToken
-{
-    //Create fundamentals variables of a token definition
     final Kind kind;
     final int pos;
+    final int row;
     final int length;
     final char[] source;
-    final int row;
-    final int col;
 
-    //===== Contructor =====//
-    public Token (Kind _kind,int _row, int _col, int _pos, int _length, char[] _source)
+    //===== Constructor =====//
+    public NumLitToken (Kind _kind, int _row, int _pos, int _length, char[] _source)
     {
         super(); // idk what this does tbh // ima watch lecture
         kind = _kind;
         pos = _pos;
+        row = _row;
         length = _length;
         source = _source;
-        row = _row;
-        col = _col;
 
     }
 
     public SourceLocation getSourceLocation()
     {
         //wrong I need to figure out how to get line, pos is the colomun
-    SourceLocation sourceLocation = new SourceLocation(row,col);
-    return sourceLocation;
+        return new SourceLocation(row,pos);
 
     }
 
@@ -49,7 +43,12 @@ public class Token implements IToken
         }
 
         return tokenString;
+    }
 
+    @Override
+    public int getValue(){
+        String tokenString = getTokenString();
+        return Integer.parseInt(tokenString);
     }
 
 
