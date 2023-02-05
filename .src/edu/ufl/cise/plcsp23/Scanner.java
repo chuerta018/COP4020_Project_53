@@ -14,8 +14,8 @@ public class Scanner implements IScanner
     int pos; // position of given Char
     char ch; // next char
     int tokenRow = 1;
-    int col = 1;
-    int col2 = 1;
+    int col = 0;
+    int col2 = 0;
 
 
     //constructor
@@ -60,6 +60,7 @@ public class Scanner implements IScanner
             switch(state) {
                 case  START -> {
                     tokenStart = pos;
+                    col = col2;
                     switch (ch)
                     {
                         case 0 -> //EOF CASE
@@ -69,70 +70,88 @@ public class Scanner implements IScanner
                         case ' ','\t','\f', '\r', '\n' -> {
                             if(ch == '\n') {
                             	tokenRow++;
-                            	col = 1;
-                            }       
+                            	col = 0;
+                            	col2 = -1;
+                            } else {
+                                col++;
+                            }
                             nextChar(); // WHITE SPACE
                         }
                         case '+' -> { // single Char +
                             nextChar();
+                            col++;
                             return new Token(PLUS, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case '*' -> { // === returns '*' or '**' === //
                             state = State.HAVE_EXP;
+                            col++;
                             nextChar();
 
                         }
                         case '0' -> { // === single Char 0 === //
                             nextChar();
+                            col++;
                             return new NumLitToken(NUM_LIT, tokenRow, tokenStart, 1, inputChars);
                         }
                         case '.' -> { // === single Char . === //
                             nextChar();
+                            col++;
                             return new Token(DOT, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case ',' -> { // === single Char , === //
                             nextChar();
+                            col++;
                             return new Token(COMMA, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case '?' -> { // === single Char ? === //
                             nextChar();
+                            col++;
                             return new Token(QUESTION, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case ':' -> { // === single Char : === //
                             nextChar();
+                            col++;
                             return new Token(COLON, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case '(' -> { // === single Char ( === //
                             nextChar();
+                            col++;
                             return new Token(LPAREN, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case ')' -> { // === single Char ) === //
                             nextChar();
+                            col++;
                             return new Token(RPAREN, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case '<' -> { // === returns '='or '<=' or '<->' === //
                             state = State.HAVE_LT;
+                            col++;
                             nextChar();
 
                         }
                         case '>' -> { // === returns '>' or '>=' token === //
                             state = State.HAVE_GT;
+                            col++;
                             nextChar();
                         }
                         case '[' -> { // === single Char [ === //
                             nextChar();
+                            col++;
                             return new Token(LSQUARE, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case ']' -> { // === single Char ] === //
                             nextChar();
+                            col++;
                             return new Token(RSQUARE, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case '{' -> { // === single Char { === //
                             nextChar();
+                            col++;
                             return new Token(LCURLY, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case '}' -> { // === single Char } === //
                             nextChar();
+                            col++;
                             return new Token(RCURLY, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case '=' -> { // === Returns = or == tokens  === //
@@ -141,43 +160,53 @@ public class Scanner implements IScanner
                         }
                         case '!' -> { // === single Char ! === //
                             nextChar();
+                            col++;
                             return new Token(BANG, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case '&' -> { // === returns '&' or '&&' token === //
                             state = State.HAVE_AND;
+                            col++;
                             nextChar();
                         }
                         case '|' -> { // === returns '|' or '||' token === //
                             state = State.HAVE_OR;
+                            col++;
                             nextChar();
                         }
                         case '/' -> { // === single Char / === //
                             nextChar();
+                            col++;
                             return new Token(DIV, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case '-' -> { // === single Char - === //
                             nextChar();
+                            col++;
                             return new Token(MINUS, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case '%' -> { // === single Char % === //
                             nextChar();
+                            col++;
                             return new Token(MOD, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case '1','2','3','4','5','6','7','8','9' -> {//char is nonzero digit
                             state = State.IN_NUM_LIT;
+                            col++;
                             nextChar();
                         }
                         case '"' -> {
                             state = State.IN_STRING_LIT;
+                            col++;
                             nextChar();
                         }
                         case '~' -> {
                             state = State.IN_COMMENT_LIT;
+                            col++;
                             nextChar();
                         }
                         default -> {
                             if (isLetter(ch)) {
                                 state = State.IN_IDENT;
+                                col++;
                                 nextChar();
                             }
                             else error("illegal char with ascii value: " + (int)ch);
@@ -330,7 +359,7 @@ public class Scanner implements IScanner
                     }
                     else if (ch == '"')
                     {
-                        int length = pos-tokenStart-2;
+                        int length = pos-tokenStart;
                         return new StringLitToken(STRING_LIT, tokenRow, tokenStart,length,inputChars);
 
                     }
@@ -356,7 +385,7 @@ public class Scanner implements IScanner
     }
 
     public void nextChar(){
-    	col++;
+    	col2++;
         pos++;
         ch = inputChars[pos];
     }
