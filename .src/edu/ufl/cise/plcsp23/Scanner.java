@@ -223,7 +223,6 @@ public class Scanner implements IScanner
                     }
                     else {
                         state = state.START;
-                        nextChar();
                         return new Token(ASSIGN, tokenRow, col, tokenStart, 1, inputChars);
                     }
 
@@ -284,7 +283,6 @@ public class Scanner implements IScanner
                     }
                     else {
                         state = state.START;
-                        nextChar();
                         return new Token(BITAND, tokenRow, col, tokenStart, 1, inputChars);
                     }
 
@@ -297,7 +295,6 @@ public class Scanner implements IScanner
                     }
                     else {
                         state = state.START;
-                        nextChar();
                         return new Token(BITOR, tokenRow, col, tokenStart, 1, inputChars);
                     }
                 }
@@ -310,7 +307,6 @@ public class Scanner implements IScanner
                     }
                     else {
                         state = state.START;
-                        nextChar();
                         return new Token(TIMES, tokenRow, col, tokenStart, 1, inputChars);
                     }
 
@@ -353,16 +349,17 @@ public class Scanner implements IScanner
                 }
                 case IN_STRING_LIT ->
                 {
-                    if (isStringChar(ch))
+                    if (ch == '"')
                     {
-                        nextChar();
-                    }
-                    else if (ch == '"')
-                    {
+                    	nextChar();
                         int length = pos-tokenStart;
                         return new StringLitToken(STRING_LIT, tokenRow, tokenStart,length,inputChars);
 
+                    } else if (isStringChar(ch)) {
+  
+                        nextChar();
                     }
+
                     else{
 
                         error("Not a valid string Token/Or does not satisfy token");
@@ -448,7 +445,7 @@ public class Scanner implements IScanner
     private boolean isStringChar(int ch)
     {
 
-        return (isInput_Char(ch) && ch !='"' && ch != '\'' ) || (isEscapeSeq(ch));
+        return (isInput_Char(ch) && ch !='"' && ch != '\'') || (isEscapeSeq(ch));
     }
     private void error(String message) throws LexicalException{
         throw new LexicalException("Error at pos " + pos + ": " + message);
