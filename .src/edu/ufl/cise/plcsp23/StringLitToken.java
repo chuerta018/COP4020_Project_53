@@ -36,7 +36,7 @@ public class StringLitToken implements IStringLitToken {
     {
         StringBuilder tokenString = new StringBuilder();
         int j = pos;
-        for( int i = 0; i<length ; i++)
+        for( int i = 0; i<length; i++)
         {
             tokenString.append(source[j]);
             j++;
@@ -47,7 +47,47 @@ public class StringLitToken implements IStringLitToken {
 
     @Override
     public String getValue() {
-            return getTokenString();
+    	StringBuilder tokenString = new StringBuilder();
+        int j = pos+1;
+        int k = 0;
+        tokenString.append(source[j]);
+        j++;
+        for( int i = 1; i< length - 2; i++)
+        { 
+            if(tokenString.charAt(k) != 92) {
+            	k++;
+              	tokenString.append(source[j]);
+            } else {
+            	if (source[j] == 92) {
+
+            	} else if (source[j] == 'b') {
+            		tokenString.deleteCharAt(k);
+            		tokenString.append('\b');          		
+            	} else if (source[j] == 't') {
+            		tokenString.deleteCharAt(k);
+            		tokenString.append('\t');   		
+            	} else if (source[j] == 'n') {
+            		tokenString.deleteCharAt(k);
+            		tokenString.append('\n');
+            	} else if (source[j] == 'r') {
+            		tokenString.deleteCharAt(k);
+            		tokenString.append('\r');
+            	} else if (source[j] == '"') {
+            		tokenString.deleteCharAt(k);
+            		tokenString.append('\"');
+            		tokenString.deleteCharAt(k);
+            	} else {
+            		tokenString.append('F');
+            	}
+            	//char bSlash = 92;
+            	//tokenString.append(bSlash);
+            	//j++;
+            	//tokenString.append('"');
+            }
+            j++;
+        }
+
+        return tokenString.toString();
     }
 
 }

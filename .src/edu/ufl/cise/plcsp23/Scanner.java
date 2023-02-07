@@ -16,6 +16,7 @@ public class Scanner implements IScanner
     int tokenRow = 1;
     int col = 0;
     int col2 = 0;
+    boolean closed = true;
 
 
     //constructor
@@ -318,6 +319,7 @@ public class Scanner implements IScanner
                     else {
                         try {
                             int length = pos - tokenStart;
+                            state= state.START;
                             NumLitToken numLit = new NumLitToken(IToken.Kind.NUM_LIT, tokenRow, tokenStart, length, inputChars);
                             numLit.getValue();
                             return numLit;
@@ -343,27 +345,46 @@ public class Scanner implements IScanner
                         {
                             kind = IDENT;
                         }
+                        state = state.START;
                         return new Token(kind, tokenRow, col, tokenStart, length, inputChars);
                     }
 
                 }
                 case IN_STRING_LIT ->
                 {
-                    if (ch == '"')
-                    {
+                	try {
+                	if (isStringChar(ch)) {
+                         nextChar();
+                     } else if (isEscapeSeq(ch)) {
+                    	 nextChar();
+                    	 nextChar();
+                     } else if (ch == 92) {
+                    	 nextChar();
+                    	 if(ch == '"') {
+                    		 nextChar();
+                    		 closed = !closed;
+                    	 } else if (ch == '\\') {
+                    		 nextChar();
+                    	 }
+                     } else if (ch == '"') {
                     	nextChar();
                         int length = pos-tokenStart;
+                        StringBuilder tokenString = new StringBuilder();
+                        int j = pos;
+                        for( int i = 0; i<length; i++)
+                        {
+                            tokenString.append(inputChars[j]);
+                            j++;
+                        }
+                        
+                        state = state.START;
                         return new StringLitToken(STRING_LIT, tokenRow, tokenStart,length,inputChars);
+                    }   
+                } catch (Exception e) {
+                	error("Not a valid string Token/Or does not satisfy token");
+                }
 
-                    } else if (isStringChar(ch)) {
-  
-                        nextChar();
-                    }
-
-                    else{
-
-                        error("Not a valid string Token/Or does not satisfy token");
-                    }
+                   
 
                 }
                 case IN_COMMENT_LIT -> {
@@ -434,7 +455,7 @@ public class Scanner implements IScanner
             tokenRow++;
         	col = 1;
         }
-        return (ch == '\b') || (ch == '\t') || (ch == '\n') || (ch == '\"') || (ch == '\\');
+        return (ch == '\b') || (ch == '\t') || (ch == '\n') || (ch == '\r');
     }
 
     private boolean isInput_Char(int ch)
@@ -445,7 +466,7 @@ public class Scanner implements IScanner
     private boolean isStringChar(int ch)
     {
 
-        return (isInput_Char(ch) && ch !='"' && ch != '\'') || (isEscapeSeq(ch));
+        return (isInput_Char(ch) && ch != '"' && ch != 92);
     }
     private void error(String message) throws LexicalException{
         throw new LexicalException("Error at pos " + pos + ": " + message);
