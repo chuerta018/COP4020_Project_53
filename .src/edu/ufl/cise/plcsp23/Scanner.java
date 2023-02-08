@@ -367,6 +367,7 @@ public class Scanner implements IScanner
                             }
                         } else if (ch == '"')
                                 {
+                        		nextChar();
                                  int length = pos-tokenStart;
                                  state = state.START;
                                  return new StringLitToken(STRING_LIT, tokenRow, col, tokenStart,length,inputChars);

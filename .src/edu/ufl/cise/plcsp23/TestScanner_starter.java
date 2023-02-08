@@ -385,7 +385,7 @@ class TestScanner_starter {
         checkString("abc \"", scanner.next());
     }
 
-	/*@Test
+	@Test
 	void andEmptyStrings() throws LexicalException {
 	    String input = """
 	            \"\"\"\"\"\"\"
@@ -397,7 +397,7 @@ class TestScanner_starter {
 	    assertThrows(LexicalException.class, () -> {
 	        scanner.next();
 	    });
-	}*/
+	}
     
     @Test
     void stringContainBSlash4() throws LexicalException {
