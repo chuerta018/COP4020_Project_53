@@ -261,7 +261,6 @@ public class Scanner implements IScanner
                             return new Token(EXCHANGE, tokenRow, col, tokenStart, 3, inputChars);
                         }
                         else { // === this case is '<' === //
-                            // not sure if the pos++ in the array brackets permanently increases the pos variable or temporarily.
                             state = state.START;
                             pos--;
                             ch = inputChars[pos];
