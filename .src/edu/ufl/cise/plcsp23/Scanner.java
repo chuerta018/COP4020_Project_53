@@ -352,30 +352,33 @@ public class Scanner implements IScanner
                 }
                 case IN_STRING_LIT ->
                 {
-                	try {
-                	if (isStringChar(ch))
-                    {
-                         nextChar();
-                    }else if (ch == 92)
-                         {
+                    try {
+                        if (isStringChar(ch))
+                        {
+                            nextChar();
+                        }else if (ch == 92)//
+                        {
                             if(isEscapeSeq(ch))
                             {
-                            nextChar();
-                            nextChar();
+                                nextChar(); //"\\"
+                                nextChar();
+
                             }else {
                                 error(" Error just one -> bracket within string thats not escape sequence");
                             }
                         } else if (ch == '"')
-                                {
-                        		nextChar();
-                                 int length = pos-tokenStart;
-                                 state = state.START;
-                                 return new StringLitToken(STRING_LIT, tokenRow, col, tokenStart,length,inputChars);
-                                }
-                        } catch (Exception e)
                         {
-                	    error("Not a valid string Token/Or does not satisfy token");
+                            nextChar();
+                            int length = pos-tokenStart;
+                            state = state.START;
+                            return new StringLitToken(STRING_LIT, tokenRow, col, tokenStart,length,inputChars);
+                        }else{
+                            error("Not a valid string Token/Or does not satisfy token");
                         }
+                    } catch (Exception e)
+                    {
+                        error("Not a valid string Token/Or does not satisfy token");
+                    }
                 }
                 case IN_COMMENT_LIT -> {
                     if (isInput_Char(ch)) {
@@ -442,28 +445,40 @@ public class Scanner implements IScanner
     private boolean isEscapeSeq (int ch) throws LexicalException {
         if(ch == '\n') {
             tokenRow++;
-        	col = 1;
+            col = 1;
         }
         int tempPos = pos+1;
         int tempCh= inputChars[tempPos];
 
         switch(tempCh)
         {
-            case 'b', 't', '"', 92 ->
+            case 'b', 't', '"','n', 'r' ->
             {
                 return true;
             }
-            case 'n', 'r' ->
-            {
-                error( " not part of lexical structure");
+            case 92 -> {
+                int tempPos2 = pos+3;
+                int tempCh2= inputChars[tempPos2];
+
+                if(tempPos2 != '\n')
+                {
+                    nextChar();
+                    return true;
+
+                }else{
+                    error( "single bracket inside ES function");
+                    return false;
+                }
 
             }
             default  -> {
+                error( " not part of lexical structure");
                 return false;
             }
         }
-        return false;
+
     }
+
 
     private boolean isInput_Char(int ch)
     {
@@ -473,7 +488,7 @@ public class Scanner implements IScanner
     private boolean isStringChar(int ch)
     {
 
-        return (isInput_Char(ch) && ch != '"' && ch != 92);
+        return (isInput_Char(ch) && ch != '"' && ch != 92 && ch != '\n' && ch!='\r');
     }
     private void error(String message) throws LexicalException{
         throw new LexicalException("Error at pos " + pos + ": " + message);

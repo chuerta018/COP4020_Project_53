@@ -10,8 +10,7 @@ public class StringLitToken implements IStringLitToken {
     final int col;
 
     //===== Constructor =====//
-    public StringLitToken (Kind _kind, int _row, int _col, int _pos, int _length, char[] _source)
-    {
+    public StringLitToken(Kind _kind, int _row, int _col, int _pos, int _length, char[] _source) {
         super(); // idk what this does tbh // ima watch lecture
         kind = _kind;
         row = _row;
@@ -22,24 +21,21 @@ public class StringLitToken implements IStringLitToken {
 
     }
 
-    public SourceLocation getSourceLocation()
-    {
+
+    public SourceLocation getSourceLocation() {
         //wrong I need to figure out how to get line, pos is the colomun
-        return new SourceLocation(row,col);
+        return new SourceLocation(row, col);
 
     }
 
-    public Kind getKind()
-    {
+    public Kind getKind() {
         return kind;
     }
 
-    public String getTokenString()
-    {
+    public String getTokenString() {
         StringBuilder tokenString = new StringBuilder();
         int j = pos;
-        for( int i = 0; i <length; i++)
-        {
+        for (int i = 0; i < length; i++) {
             tokenString.append(source[j]);
             j++;
         }
@@ -49,39 +45,41 @@ public class StringLitToken implements IStringLitToken {
 
     @Override
     public String getValue() {
-    	StringBuilder tokenString = new StringBuilder();
+        StringBuilder tokenString = new StringBuilder();
         int j = pos;
-        for( int i = 0; i<length-1; i++)
-        {
+        for (int i = 0; i < length - 1; i++) {
             if (source[j] != '"') // includes all escape squences just not "
             {
-                if(source[j] == 92)
-                {
-                    switch(source[j+1])
-                    {
-                        case 'b':   tokenString.append('\b');
+                if (source[j] == 92) {
+                    switch (source[j + 1]) {
+                        case 'b':
+                            tokenString.append('\b');
                             j++;
                             break;
-                        case 't':   tokenString.append('\t');
+                        case 't':
+                            tokenString.append('\t');
                             j++;
                             break;
-                        case '"':   tokenString.append(source[j+1]);
+                        case '"':
+                            tokenString.append(source[j + 1]);
                             j++;
                             break;
-                        case 92:    tokenString.append(source[j+1]);
+                        case 92:
+                            tokenString.append(source[j + 1]);
                             j++;
                             break;
-                        case 'n':   tokenString.append('\n');
+                        case 'n':
+                            tokenString.append('\n');
                             j++;
                             break;
-                        case 'r':   tokenString.append('\r');
+                        case 'r':
+                            tokenString.append('\r');
                             j++;
                             break;
-                         default: break; // IT SOULD NEVER REACH HERE HOPEFULLY ......
+                        default:
+                            break; // IT SOULD NEVER REACH HERE HOPEFULLY ......
                     }
-                }
-                else
-                {
+                } else {
                     tokenString.append(source[j]);
                 }
             }
@@ -89,5 +87,5 @@ public class StringLitToken implements IStringLitToken {
         }
         return tokenString.toString();
     }
-
 }
+
