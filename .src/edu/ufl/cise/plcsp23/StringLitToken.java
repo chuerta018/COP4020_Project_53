@@ -51,63 +51,39 @@ public class StringLitToken implements IStringLitToken {
     public String getValue() {
     	StringBuilder tokenString = new StringBuilder();
         int j = pos;
-        for( int i = 0; i<length; i++)
+        for( int i = 0; i<length-1; i++)
         {
             if (source[j] != '"') // includes all escape squences just not "
             {
-            	//tokenString.append('L');
                 if(source[j] == 92)
                 {
-                	//tokenString.append('L');
-               
-                   if (source[j+1] == 92) {
-                    	if (source[j+2] == 'b') {
-                    		j+=2;
-                            i+=2;
-                    		tokenString.append('\b');
-                    	} else if (source[j+2] == 't') {
-                    		j+=2;
-                            i+=2;
-                    		tokenString.append('\t');
-                    	} else if (source[j+2] == '"') {
-                    		j+=2;
-                            i+=2;
-                            tokenString.append('P');
-                    		tokenString.append('\"');
-                    	} else if (source[j+2] == 'n') {
-                    		j+=2;
-                            i+=2;
-                    		tokenString.append('\n');
-                    	} else if (source[j+2] == 'r') {
-                    		j+=2;
-                            i+=2;
-                    		tokenString.append('\r');
-                    	} else {
-                    		tokenString.append('Q');
-                    	}
-                 } else if (source[j+1] == 'b') {
-                	 j++;
-                     i++;
-                	 tokenString.append('\b');
-                 } else if (source[j+1] == 't') {
-                	 j++;
-                     i++;
-                     //tokenString.append('F');
-                	 tokenString.append('\t');
-                 } else if (source[j+1] == '"') {
-                	 j++;
-                     i++;
-                	 tokenString.append('"');
-                 } else {
-                	 tokenString.append('W');
-                 }
-            } else
-            {
-            	//tokenString.append('H');
-                tokenString.append(source[j]);
-                
-            }
-                
+                    switch(source[j+1])
+                    {
+                        case 'b':   tokenString.append('\b');
+                            j++;
+                            break;
+                        case 't':   tokenString.append('\t');
+                            j++;
+                            break;
+                        case '"':   tokenString.append(source[j+1]);
+                            j++;
+                            break;
+                        case 92:    tokenString.append(source[j+1]);
+                            j++;
+                            break;
+                        case 'n':   tokenString.append('\n');
+                            j++;
+                            break;
+                        case 'r':   tokenString.append('\r');
+                            j++;
+                            break;
+                         default: break; // IT SOULD NEVER REACH HERE HOPEFULLY ......
+                    }
+                }
+                else
+                {
+                    tokenString.append(source[j]);
+                }
             }
             j++;
         }
