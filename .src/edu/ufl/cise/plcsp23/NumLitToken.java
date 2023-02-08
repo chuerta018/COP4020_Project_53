@@ -4,17 +4,19 @@ public class NumLitToken implements INumLitToken{
 
     final Kind kind;
     final int pos;
-    final int row;
     final int length;
     final char[] source;
+    final int row;
+    final int col;
 
     //===== Constructor =====//
-    public NumLitToken (Kind _kind, int _row, int _pos, int _length, char[] _source)
+    public NumLitToken (Kind _kind, int _row, int _col, int _pos, int _length, char[] _source)
     {
         super(); // idk what this does tbh // ima watch lecture
         kind = _kind;
         pos = _pos;
         row = _row;
+        col = _col;
         length = _length;
         source = _source;
 
@@ -23,7 +25,7 @@ public class NumLitToken implements INumLitToken{
     public SourceLocation getSourceLocation()
     {
         //wrong I need to figure out how to get line, pos is the colomun
-        return new SourceLocation(row,pos);
+        return new SourceLocation(row,col);
 
     }
 

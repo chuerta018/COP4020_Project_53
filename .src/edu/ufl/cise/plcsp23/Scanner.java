@@ -92,7 +92,7 @@ public class Scanner implements IScanner
                         case '0' -> { // === single Char 0 === //
                             nextChar();
                             col++;
-                            return new NumLitToken(NUM_LIT, tokenRow, tokenStart, 1, inputChars);
+                            return new NumLitToken(NUM_LIT, tokenRow, col, tokenStart, 1, inputChars);
                         }
                         case '.' -> { // === single Char . === //
                             nextChar();
@@ -320,7 +320,7 @@ public class Scanner implements IScanner
                         try {
                             int length = pos - tokenStart;
                             state= state.START;
-                            NumLitToken numLit = new NumLitToken(IToken.Kind.NUM_LIT, tokenRow, tokenStart, length, inputChars);
+                            NumLitToken numLit = new NumLitToken(IToken.Kind.NUM_LIT, tokenRow, col, tokenStart, length, inputChars);
                             numLit.getValue();
                             return numLit;
 
@@ -353,39 +353,28 @@ public class Scanner implements IScanner
                 case IN_STRING_LIT ->
                 {
                 	try {
-                	if (isStringChar(ch)) {
+                	if (isStringChar(ch))
+                    {
                          nextChar();
-                     } else if (isEscapeSeq(ch)) {
-                    	 nextChar();
-                    	 nextChar();
-                     } else if (ch == 92) {
-                    	 nextChar();
-                    	 if(ch == '"') {
-                    		 nextChar();
-                    		 closed = !closed;
-                    	 } else if (ch == '\\') {
-                    		 nextChar();
-                    	 }
-                     } else if (ch == '"') {
-                    	nextChar();
-                        int length = pos-tokenStart;
-                        StringBuilder tokenString = new StringBuilder();
-                        int j = pos;
-                        for( int i = 0; i<length; i++)
+                    }else if (ch == 92)
+                         {
+                            if(isEscapeSeq(ch))
+                            {
+                            nextChar();
+                            nextChar();
+                            }else {
+                                error(" Error just one -> bracket within string thats not escape sequence");
+                            }
+                        } else if (ch == '"')
+                                {
+                                 int length = pos-tokenStart;
+                                 state = state.START;
+                                 return new StringLitToken(STRING_LIT, tokenRow, col, tokenStart,length,inputChars);
+                                }
+                        } catch (Exception e)
                         {
-                            tokenString.append(inputChars[j]);
-                            j++;
+                	    error("Not a valid string Token/Or does not satisfy token");
                         }
-                        
-                        state = state.START;
-                        return new StringLitToken(STRING_LIT, tokenRow, tokenStart,length,inputChars);
-                    }   
-                } catch (Exception e) {
-                	error("Not a valid string Token/Or does not satisfy token");
-                }
-
-                   
-
                 }
                 case IN_COMMENT_LIT -> {
                     if (isInput_Char(ch)) {
@@ -449,13 +438,30 @@ public class Scanner implements IScanner
         return isLetter(ch) || (ch == '$') || (ch == '_');
     }
 
-    private boolean isEscapeSeq(int ch)
-    {
+    private boolean isEscapeSeq (int ch) throws LexicalException {
         if(ch == '\n') {
             tokenRow++;
         	col = 1;
         }
-        return (ch == '\b') || (ch == '\t') || (ch == '\n') || (ch == '\r');
+        int tempPos = pos+1;
+        int tempCh= inputChars[tempPos];
+
+        switch(tempCh)
+        {
+            case 'b', 't', '"', 92 ->
+            {
+                return true;
+            }
+            case 'n', 'r' ->
+            {
+                error( " not part of lexical structure");
+
+            }
+            default  -> {
+                return false;
+            }
+        }
+        return false;
     }
 
     private boolean isInput_Char(int ch)
