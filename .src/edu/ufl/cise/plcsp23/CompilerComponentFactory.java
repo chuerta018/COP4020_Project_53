@@ -15,5 +15,10 @@ public class CompilerComponentFactory {
 		return new Scanner(input);
 		//Add statement to return an instance of your scanner
 	}
+	
+	public static IParser makeAssignment2Parser(String input) throws LexicalException { 
+		return null;
+		//add code to create a scanner and parser and return the parser. 
+	} 
 
 }
