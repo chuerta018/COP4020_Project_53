@@ -1,452 +1,236 @@
 /*Copyright 2023 by Beverly A Sanders
  *
- * This code is provided for solely for use of students in COP4020 Programming Language Concepts at the
- * University of Florida during the spring semester 2023 as part of the course project.
+ * This code is provided for solely for use of students in COP4020 Programming
+Language Concepts at the
+ * University of Florida during the spring semester 2023 as part of the course
+project.
  *
  * No other use is authorized.
  *
- * This code may not be posted on a public web site either during or after the course.
+ * This code may not be posted on a public web site either during or after the
+course.
  */
-
 package edu.ufl.cise.plcsp23;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
-import java.util.ArrayList;
-
+import edu.ufl.cise.plcsp23.IToken.Kind;
+import edu.ufl.cise.plcsp23.ast.*;
 import org.junit.jupiter.api.Test;
 
-import edu.ufl.cise.plcsp23.IToken.Kind;
-import edu.ufl.cise.plcsp23.IToken.SourceLocation;
+import static org.junit.jupiter.api.Assertions.*;
 
-class TestScanner_starter {
-
-	// makes it easy to turn output on and off (and less typing than
-	// System.out.println)
+class TestScanner_starter{
+	/** Indicates whether show should generate output*/
 	static final boolean VERBOSE = true;
-
+	/**
+	 * Prints obj to console if VERBOSE.  This is easier to type than
+	 System.out.println and makes it easy to disable output.
+	 *
+	 * @param obj
+	 */
 	void show(Object obj) {
 		if (VERBOSE) {
 			System.out.println(obj);
 		}
 	}
-
-	// check that this token has the expected kind
-	void checkToken(Kind expectedKind, IToken t) {
-		assertEquals(expectedKind, t.getKind());
+	/** Constructs a scanner and parser for the given input string, scans and
+	 parses the input and returns and AST.
+	 *
+	 * @param input   String representing program to be tested
+	 * @return  AST representing the program
+	 * @throws PLCException
+	 */
+	AST getAST(String input) throws  PLCException {
+		return  CompilerComponentFactory.makeAssignment2Parser(input).parse();
 	}
-
-	void checkToken(Kind expectedKind, String expectedChars, SourceLocation expectedLocation, IToken t) {
-		assertEquals(expectedKind, t.getKind());
-		assertEquals(expectedChars, t.getTokenString());
-		assertEquals(expectedLocation, t.getSourceLocation());
-		;
+	/**
+	 * Checks that the given AST e has type NumLitExpr with the indicated value.
+	 Returns the given AST cast to NumLitExpr.
+	 *
+	 * @param e
+	 * @param value
+	 * @return
+	 */
+	NumLitExpr checkNumLit(AST e, int value) {
+		assertTrue(e instanceof NumLitExpr);
+		NumLitExpr ne = (NumLitExpr)e;
+		assertEquals(value, ne.getValue());
+		return ne;
 	}
-
-	void checkIdent(String expectedChars, IToken t) {
-		checkToken(Kind.IDENT, t);
-		assertEquals(expectedChars.intern(), t.getTokenString().intern());
-		;
+	/**
+	 *  Checks that the given AST e has type StringLitExpr with the given String
+	 value.  Returns the given AST cast to StringLitExpr.
+	 * @param
+	 * @param
+	 * @return
+	 */
+	StringLitExpr checkStringLit(AST e, String value) {
+		assertTrue(e instanceof StringLitExpr);
+		StringLitExpr se = (StringLitExpr)e;
+		assertEquals(value,se.getValue());
+		return se;
 	}
-
-	void checkString(String expectedValue, IToken t) {
-		assertTrue(t instanceof IStringLitToken);
-		assertEquals(expectedValue, ((IStringLitToken) t).getValue());
+	/**
+	 *  Checks that the given AST e has type UnaryExpr with the given operator.
+	 Returns the given AST cast to UnaryExpr.
+	 * @param e
+	 * @param op  Kind of expected operator
+	 * @return
+	 */
+	private UnaryExpr checkUnary(AST e, Kind op) {
+		assertTrue(e instanceof UnaryExpr);
+		assertEquals(op, ((UnaryExpr)e).getOp());
+		return (UnaryExpr)e;
 	}
-
-	void checkString(String expectedChars, String expectedValue, SourceLocation expectedLocation, IToken t) {
-		assertTrue(t instanceof IStringLitToken);
-		assertEquals(expectedValue, ((IStringLitToken) t).getValue());
-		assertEquals(expectedChars, t.getTokenString());
-		assertEquals(expectedLocation, t.getSourceLocation());
+	/**
+	 *  Checks that the given AST e has type ConditionalExpr.  Returns the given
+	 AST cast to ConditionalExpr.
+	 * @param e
+	 * @return
+	 */
+	private ConditionalExpr checkConditional(AST e) {
+		assertTrue(e instanceof ConditionalExpr);
+		return (ConditionalExpr)e;
 	}
-
-	void checkNUM_LIT(int expectedValue, IToken t) {
-		checkToken(Kind.NUM_LIT, t);
-		int value = ((INumLitToken) t).getValue();
-		assertEquals(expectedValue, value);
+	/**
+	 *  Checks that the given AST e has type BinaryExpr with the given operator.
+	 Returns the given AST cast to BinaryExpr.
+	 *
+	 * @param
+	 * @param
+	 * @return
+	 */
+	BinaryExpr checkBinary(AST e, Kind expectedOp) {
+		assertTrue(e instanceof BinaryExpr);
+		BinaryExpr be = (BinaryExpr)e;
+		assertEquals(expectedOp, be.getOp());
+		return be;
 	}
-
-	void checkNUM_LIT(int expectedValue, SourceLocation expectedLocation, IToken t) {
-		checkToken(Kind.NUM_LIT, t);
-		int value = ((INumLitToken) t).getValue();
-		assertEquals(expectedValue, value);
-		assertEquals(expectedLocation, t.getSourceLocation());
+	/**
+	 * Checks that the given AST e has type IdentExpr with the given name.  Returns the
+	 given AST cast to IdentExpr.
+	 * @param
+	 * @param
+	 * @return
+	 */
+	IdentExpr checkIdent(AST e, String name) {
+		assertTrue(e instanceof IdentExpr);
+		IdentExpr ident = (IdentExpr)e;
+		assertEquals(name,ident.getName());
+		return ident;
 	}
-
-	void checkTokens(IScanner s, IToken.Kind... kinds) throws LexicalException {
-		for (IToken.Kind kind : kinds) {
-			checkToken(kind, s.next());
-		}
-	}
-
-	void checkTokens(String input, IToken.Kind... kinds) throws LexicalException {
-		IScanner s = CompilerComponentFactory.makeScanner(input);
-		for (IToken.Kind kind : kinds) {
-			checkToken(kind, s.next());
-		}
-	}
-
-	// check that this token is the EOF token
-	void checkEOF(IToken t) {
-		checkToken(Kind.EOF, t);
-	}
-
-
 	@Test
-	void emptyProg() throws LexicalException {
-		String input = "";
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkEOF(scanner.next());
-	}
-
-	@Test
-	void onlyWhiteSpace() throws LexicalException {
-		String input = " \t \r\n \f \n";
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkEOF(scanner.next());
-		checkEOF(scanner.next());  //repeated invocations of next after end reached should return EOF token
-	}
-
-	@Test
-	void numLits1() throws LexicalException {
-		String input = """
-				123
-				05 240
-				""";
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkNUM_LIT(123, scanner.next());
-		checkNUM_LIT(0, scanner.next());
-		checkNUM_LIT(5, scanner.next());
-		checkNUM_LIT(240, scanner.next());
-		checkEOF(scanner.next());
-	}
-
-	@Test
-		//Too large should still throw LexicalException
-	void numLitTooBig() throws LexicalException {
-		String input = "999999999999999999999";
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		assertThrows(LexicalException.class, () -> {
-			scanner.next();
+	void emptyProgram() throws PLCException {
+		String input = "";  //no empty expressions, this program should throw a
+		assertThrows(SyntaxException.class, () -> {
+			getAST(input);
 		});
 	}
-
-
 	@Test
-	void identsAndReserved() throws LexicalException {
-		String input = """
-				i0
-				  i1  x ~~~2 spaces at beginning and after il
-				y Y
-				""";
-
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkToken(Kind.IDENT,"i0", new SourceLocation(1,1), scanner.next());
-		checkToken(Kind.IDENT, "i1",new SourceLocation(2,3), scanner.next());
-		checkToken(Kind.RES_x, "x", new SourceLocation(2,7), scanner.next());
-		checkToken(Kind.RES_y, "y", new SourceLocation(3,1), scanner.next());
-		checkToken(Kind.RES_Y, "Y", new SourceLocation(3,3), scanner.next());
-		checkEOF(scanner.next());
+	void numLit() throws PLCException {
+		String input= "3";
+		checkNumLit(getAST(input),3);
 	}
-
-
 	@Test
-	void operators0() throws LexicalException {
-		String input = """
-				==
-				+
-				/
-				====
-				=
-				===
-				""";
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkToken(Kind.EQ, scanner.next());
-		checkToken(Kind.PLUS, scanner.next());
-		checkToken(Kind.DIV, scanner.next());
-		checkToken(Kind.EQ, scanner.next());
-		checkToken(Kind.EQ, scanner.next());
-		checkToken(Kind.ASSIGN, scanner.next());
-		checkToken(Kind.EQ, scanner.next());
-		checkToken(Kind.ASSIGN, scanner.next());
-		checkEOF(scanner.next());
+	void stringLit() throws PLCException {
+		String input= "\"Go Gators\" ";
+		checkStringLit(getAST(input), "Go Gators");
 	}
-
-
 	@Test
-	void stringLiterals1() throws LexicalException {
-		String input = """
-				"hello"
-				"\t"
-				"\\""
-				""";
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkString(input.substring(0, 7),"hello", new SourceLocation(1,1), scanner.next());
-		checkString(input.substring(8, 11), "\t", new SourceLocation(2,1), scanner.next());
-		checkString(input.substring(12, 16), "\"",  new SourceLocation(3,1), scanner.next());
-		checkEOF(scanner.next());
+	void Z() throws PLCException {
+		String input = " Z  ";
+		AST e = getAST(input);
+		assertTrue(e instanceof ZExpr);
 	}
-
-
 	@Test
-	void illegalEscape() throws LexicalException {
+	void rand() throws PLCException {
+		String input = "  rand";
+		Expr e = (Expr) getAST(input);
+		assertEquals(1,e.getLine());
+		assertEquals(3, e.getColumn());
+		assertTrue(e instanceof RandomExpr);
+	}
+	@Test
+	void primary() throws PLCException {
+		String input = " (3) ";
+		Expr e = (Expr) getAST(input);
+		checkNumLit(e,3);
+	}
+	@Test
+	void unary1()
+			throws PLCException {
+		String input = " -3 ";
+		UnaryExpr ue = checkUnary(getAST(input), Kind.MINUS);
+		checkNumLit(ue.getE(),3);
+	}
+	@Test
+	void unary2()
+			throws PLCException {
+		String input = " cos atan ! - \"hello\" ";
+		UnaryExpr ue0 = checkUnary(getAST(input), Kind.RES_cos);
+		UnaryExpr ue1 = checkUnary(ue0.getE(), Kind.RES_atan);
+		UnaryExpr ue2 = checkUnary(ue1.getE(),Kind.BANG);
+		UnaryExpr ue3 = checkUnary(ue2.getE(), Kind.MINUS);
+		checkStringLit(ue3.getE(), "hello");
+	}
+	@Test void ident() throws PLCException {
+		String input = "b";
+		checkIdent(getAST(input),"b");
+	}
+	@Test void binary0() throws PLCException {
+		String input = "b+2";
+		BinaryExpr binary = checkBinary(getAST(input),Kind.PLUS);
+		checkIdent(binary.getLeft(),"b");
+		checkNumLit(binary.getRight(),2);
+	}
+	@Test void binary1() throws PLCException {
+		String input = "1-2+3*4/5%6";  //   (1-2) +  (((3  * 4)  /  5) % 6)
+		BinaryExpr be0 = checkBinary(getAST(input), Kind.PLUS); // (1-2) + (3*4/5%6)
+		BinaryExpr be0l = checkBinary(be0.getLeft(),Kind.MINUS); // 1-2
+		checkNumLit(be0l.getLeft(),1);
+		checkNumLit(be0l.getRight(),2);
+		BinaryExpr be0r = checkBinary(be0.getRight(),Kind.MOD);  //(3*4/5)%6
+		checkNumLit(be0r.getRight(),6);
+		BinaryExpr be0rl = checkBinary(be0r.getLeft(),Kind.DIV );  //(3*4)/5
+		checkNumLit(be0rl.getRight(),5);  // 5
+		BinaryExpr be0rll = checkBinary(be0rl.getLeft(), Kind.TIMES); // 3*4
+		checkNumLit(be0rll.getLeft(),3);
+		checkNumLit(be0rll.getRight(),4);
+	}
+	@Test void conditional0() throws PLCException {
+		String input = " if d ? e ? f";
+		ConditionalExpr ce = checkConditional(getAST(input));
+		checkIdent(ce.getGuard(),"d");
+		checkIdent(ce.getTrueCase(),"e");
+		checkIdent(ce.getFalseCase(),"f");
+	}
+	@Test void conditional1() throws PLCException {
 		String input = """
-				"\\t"
-				"\\k"
-				""";
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkString("\"\\t\"","\t", new SourceLocation(1,1), scanner.next());
-		assertThrows(LexicalException.class, () -> {
-			scanner.next();
+if if 3 ? 4 ? 5 ? if 6 ? 7 ? 8 ? if 9 ? 10 ? 11
+""";
+		ConditionalExpr ce = checkConditional(getAST(input));
+		ConditionalExpr guard = checkConditional(ce.getGuard());
+		ConditionalExpr trueCase = checkConditional(ce.getTrueCase());
+		ConditionalExpr falseCase = checkConditional(ce.getFalseCase());
+		checkNumLit(guard.getGuard(),3);
+		checkNumLit(guard.getTrueCase(),4);
+		checkNumLit(guard.getFalseCase(),5);
+		checkNumLit(trueCase.getGuard(),6);
+		checkNumLit(trueCase.getTrueCase(),7);
+		checkNumLit(trueCase.getFalseCase(),8);
+		checkNumLit(falseCase.getGuard(),9);
+		checkNumLit(falseCase.getTrueCase(),10);
+		checkNumLit(falseCase.getFalseCase(),11);
+	}
+	@Test void error0() throws PLCException {
+		String input = "b + + 2";
+		assertThrows(SyntaxException.class, () -> {
+			getAST(input);
 		});
 	}
-
-
-
-	@Test
-	void lessThanGreaterThanExchange() throws LexicalException {
-		String input = """
-				<->>>>=
-				<<=<
-				""";
-		checkTokens(input, Kind.EXCHANGE, Kind.GT, Kind.GT, Kind.GE, Kind.LT, Kind.LE, Kind.LT, Kind.EOF);
-	}
-
-	/** The Scanner should not backtrack so this input should throw an exception */
-	@Test
-	void incompleteExchangeThrowsException() throws LexicalException {
-		String input = " <- ";
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
+	@Test void error1() throws PLCException {
+		String input = "3 @ 4"; //this should throw a LexicalException
 		assertThrows(LexicalException.class, () -> {
-			scanner.next();
-		});
-	}
-
-	@Test
-	void illegalChar() throws LexicalException {
-		String input = """
-				abc
-				@
-				""";
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkIdent("abc", scanner.next());
-		assertThrows(LexicalException.class, () -> {
-			@SuppressWarnings("unused")
-			IToken t = scanner.next();
-		});
-	}
-
-	@Test
-	void numLits2() throws LexicalException {
-		String input = """
-				123
-				05
-				240
-				1+2
-				""";
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkNUM_LIT(123, scanner.next());
-		checkNUM_LIT(0, scanner.next());
-		checkNUM_LIT(5, scanner.next());
-		checkNUM_LIT(240, scanner.next());
-		checkNUM_LIT(1, scanner.next());
-		checkToken(Kind.PLUS, scanner.next());
-		checkNUM_LIT(2, scanner.next());
-	}
-
-	@Test
-	void andNothingButComments() throws LexicalException {
-		String input = """
-	            ~jerry
-	            ~can
-	            ~move
-	            ~if
-	            ~he's
-	            ~not
-	            ~@#$%&#^%&@
-	            ~tired
-	            """;
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkEOF(scanner.next());
-	}
-
-	@Test
-	void andNumLitsZeroes() throws LexicalException {
-		String input = """
-	            000
-	            00
-	            001
-	            10 0
-	            """;
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkNUM_LIT(0, scanner.next());
-		checkNUM_LIT(0, scanner.next());
-		checkNUM_LIT(0, scanner.next());
-		checkNUM_LIT(0, scanner.next());
-		checkNUM_LIT(0, scanner.next());
-		checkNUM_LIT(0, scanner.next());
-		checkNUM_LIT(0, scanner.next());
-		checkNUM_LIT(1, scanner.next());
-		checkNUM_LIT(10, scanner.next());
-		checkNUM_LIT(0, scanner.next());
-		checkEOF(scanner.next());
-	}
-
-	@Test
-	void andIdentsWithNumLits() throws LexicalException {
-		String input = """
-	            0f0f0
-	            12if21
-	            12if 21
-	            00 if 12
-	            """;
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkNUM_LIT(0, scanner.next());
-		checkToken(Kind.IDENT, "f0f0", new SourceLocation(1, 2), scanner.next());
-		checkNUM_LIT(12, scanner.next());
-		checkToken(Kind.IDENT, "if21", new SourceLocation(2, 3), scanner.next());
-		checkNUM_LIT(12, scanner.next());
-		checkToken(Kind.RES_if, "if", new SourceLocation(3, 3), scanner.next());
-		checkNUM_LIT(21, scanner.next());
-		checkNUM_LIT(0, scanner.next());
-		checkNUM_LIT(0, scanner.next());
-		checkToken(Kind.RES_if, "if", new SourceLocation(4, 4), scanner.next());
-		checkNUM_LIT(12, scanner.next());
-		checkEOF(scanner.next());
-	}
-
-	@Test
-	void andOperators() throws LexicalException {
-		String input = """
-	            =&&
-	            *****
-	            ~====
-	            ||?:,|
-	            """;
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkToken(Kind.ASSIGN, scanner.next());
-		checkToken(Kind.AND, scanner.next());
-		checkToken(Kind.EXP, scanner.next());
-		checkToken(Kind.EXP, scanner.next());
-		checkToken(Kind.TIMES, scanner.next());
-		checkToken(Kind.OR, scanner.next());
-		checkToken(Kind.QUESTION, scanner.next());
-		checkToken(Kind.COLON, scanner.next());
-		checkToken(Kind.COMMA, scanner.next());
-		checkToken(Kind.BITOR, scanner.next());
-		checkEOF(scanner.next());
-	}
-
-	@Test
-	void andMoreIllegalChars() throws LexicalException {
-		String input1 = "hey! `";
-		IScanner scanner1 = CompilerComponentFactory.makeScanner(input1);
-		checkIdent("hey", scanner1.next());
-		checkToken(Kind.BANG, scanner1.next());
-		assertThrows(LexicalException.class, () -> {
-			scanner1.next();
-		});
-
-		String input2 = "stop \\";
-		IScanner scanner2 = CompilerComponentFactory.makeScanner(input2);
-		checkIdent("stop", scanner2.next());
-		assertThrows(LexicalException.class, () -> {
-			scanner2.next();
-		});
-
-		String input3 = "noo '";
-		IScanner scanner3 = CompilerComponentFactory.makeScanner(input3);
-		checkIdent("noo", scanner3.next());
-		assertThrows(LexicalException.class, () -> {
-			scanner3.next();
-		});
-	}
-
-	@Test
-	void stringContainBSlash() throws LexicalException {
-		String input = """
-            "\\ abc"
-            """;
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		assertThrows(LexicalException.class, () -> {
-			scanner.next();
-		});
-	}
-
-	@Test
-	void stringContainBSlash3() throws LexicalException {
-		String input = """
-            "abc \\""
-            """;
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkString("abc \"", scanner.next());
-	}
-
-	@Test
-	void andEmptyStrings() throws LexicalException {
-		String input = """
-	            \"\"\"\"\"\"\"
-	            """;
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkString("", scanner.next());
-		checkString("", scanner.next());
-		checkString("", scanner.next());
-		assertThrows(LexicalException.class, () -> {
-			scanner.next();
-		});
-	}
-
-	@Test
-	void stringContainBSlash4() throws LexicalException {
-		String input = """
-            "abc \\""abc"
-            """;
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkString("abc \"", scanner.next());
-		checkIdent("abc", scanner.next());
-		assertThrows(LexicalException.class, () -> {
-			scanner.next();
-		});
-		checkEOF(scanner.next());
-	}
-
-	@Test
-	void stringContainBSlash2() throws LexicalException {
-		String input = """
-            "abc \\"
-            """;
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		assertThrows(LexicalException.class, () -> {
-			scanner.next();
-		});
-	}
-
-	@Test
-	void illegalLineTermInStringLiteral() throws LexicalException {
-		String input = """
-				"\\n"  ~ this one passes the escape sequence--it is OK
-				"\n"   ~ this on passes the LF, it is illegal.
-				""";
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkString("\"\\n\"","\n", new SourceLocation(1,1), scanner.next());
-		assertThrows(LexicalException.class, () -> {
-			scanner.next();
-		});
-	}
-// "  \\\\\\\\ "
-	@Test
-	void andIllegalCarriageReturn() throws LexicalException {
-		String input = """
-                "\\r" ~ legal
-                "\r" ~ illegal
-                """;
-		IScanner scanner = CompilerComponentFactory.makeScanner(input);
-		checkString("\"\\r\"", "\r", new SourceLocation(1, 1), scanner.next());
-		assertThrows(LexicalException.class, () -> {
-			scanner.next();
+			getAST(input);
 		});
 	}
 }
