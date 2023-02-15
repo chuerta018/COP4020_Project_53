@@ -1,7 +1,6 @@
 package edu.ufl.cise.plcsp23;
 
-import edu.ufl.cise.plcsp23.ast.AST;
-import edu.ufl.cise.plcsp23.ast.ConditionalExpr;
+import edu.ufl.cise.plcsp23.ast.*;
 
 import static edu.ufl.cise.plcsp23.IToken.Kind.*;
 
@@ -14,63 +13,87 @@ public class Parse implements IParser {
     @Override
     public AST parse() throws PLCException {
 
-        return null;
+        return Expr();
     }
 
     //=======  Constructor  =======//
     Parse(Scanner scanner) throws LexicalException {
          myScanner = scanner;
          t = myScanner.next();
+
     }
 
     //======= Concrete Syntax Methods =======//
 
-    public void PrimaryExpr() throws PLCException// <primary_expr> ::= STRING_LIT | NUM_LIT | IDENT | (<expr)| Z | rand
+    public Expr PrimaryExpr() throws PLCException// <primary_expr> ::= STRING_LIT | NUM_LIT | IDENT | (<expr)| Z | rand
     {
+        Expr e = null;
         switch(t.getKind())
         {
-            case STRING_LIT -> consume();
-            case NUM_LIT -> consume();
-            case IDENT -> consume();
+            case STRING_LIT ->{
+                e  = new StringLitExpr(t);
+                consume();
+            }
+            case NUM_LIT -> {
+                e = new NumLitExpr(t);
+                consume();
+            }
+            case IDENT ->{
+                e = new IdentExpr(t);
+                consume();
+            }
             case LPAREN ->
             {
                consume();
-                Expr();
+                e = Expr();
                 match(RPAREN);
             }
-            case RES_Z -> consume();
-            case RES_rand -> consume();
+            case RES_Z -> {
+                e =  new ZExpr(t);
+                consume();
+            }
+            case RES_rand ->{
+                e = new RandomExpr(t);
+                consume();
+            }
             default -> PLCerror("expected a Predict set of PrimaryExpress IN PRIMARY: string| num | indent | ( | rand |z");
         }
-
-        return;
-
+        return e;
     }
-    public void UnaryExpr() throws PLCException {
+    public Expr unaryExpr() throws PLCException {
+        IToken first = t;
+        Expr e = null;
         switch(t.getKind())
         {
             case BANG, MINUS,RES_sin,RES_cos,RES_atan ->
             {
+                IToken op = t;
                 consume();
-                UnaryExpr();
+                e  = new UnaryExpr(first,op.getKind(),unaryExpr());
             }
             default ->
             {
-                    PLCerror("expected a Predict set of UNARY: ! | - | sin | cos | atan");
+                    e = PrimaryExpr();
             }
         }
-        PrimaryExpr();
+        return e;
     }
-    public void MultiplicativeExpr() throws PLCException {
-        UnaryExpr();
+    public Expr MultiplicativeExpr() throws PLCException {
+        IToken first = t;
+        Expr left = null;
+        left = unaryExpr();
+        Expr right = null;
+
         while(t.getKind() == TIMES || t.getKind() == DIV || t.getKind() == MOD)
         {
             switch(t.getKind())
             {
                 case TIMES, DIV,MOD->
                 {
-                  consume();
-                  UnaryExpr();
+                    IToken op = t;
+                    consume();
+                    right = unaryExpr();
+                    left = new BinaryExpr(first,left,op.getKind(),right);
                 }
                 default ->
                 {
@@ -78,22 +101,27 @@ public class Parse implements IParser {
                 }
             }
         }
-
+        return left;
     }
 
 
 
-    public void AdditiveExpr() throws PLCException
+    public Expr AdditiveExpr() throws PLCException
     {
-        MultiplicativeExpr();
+        IToken first = t;
+        Expr left = null;
+        left = MultiplicativeExpr();
+        Expr right = null;
         while(t.getKind() == PLUS || t.getKind() == MINUS)
         {
             switch(t.getKind())
             {
                 case PLUS,MINUS ->
                 {
+                    IToken op = t;
                     consume();
-                    MultiplicativeExpr();
+                    right = MultiplicativeExpr();
+                    left = new BinaryExpr(first,left,op.getKind(),right);
                 }
                 default ->
                 {
@@ -101,40 +129,48 @@ public class Parse implements IParser {
                 }
             }
         }
-
-
+        return left;
     }
 
-    public void PowerExpr() throws PLCException
+    public Expr PowerExpr() throws PLCException
     {
-        AdditiveExpr();
+        IToken first = t;
+        Expr left = null;
+        left = AdditiveExpr();
+        Expr right = null;
         switch (t.getKind())
         {
             case EXP ->
             {
+                IToken op = t;
                 consume();
-                AdditiveExpr();
+                right = AdditiveExpr();
+                left = new BinaryExpr(first,left,op.getKind(),right);
             }
             default ->
             {
-                return;
+                return left;
             }
-
         }
-
+        return left;
     }
 
-    public void CompareExpr() throws PLCException
+    public Expr CompareExpr() throws PLCException
     {
-        PowerExpr();
+        IToken first = t;
+        Expr left = null;
+        left =  PowerExpr();
+        Expr right = null;
         while(t.getKind() == LT || t.getKind() == GT || t.getKind() == LE || t.getKind() == GE || t.getKind() == EQ)
         {
             switch(t.getKind())
             {
                 case LT,LE,GT,GE,EQ ->
                 {
+                    IToken op = t;
                     consume();
-                    PowerExpr();
+                    right = PowerExpr();
+                    left = new BinaryExpr(first,left,op.getKind(),right);
                 }
                 default ->
                 {
@@ -142,20 +178,24 @@ public class Parse implements IParser {
                 }
             }
         }
-
-
+        return left;
     }
-    public void ANDExpr() throws PLCException
+    public Expr ANDExpr() throws PLCException
     {
-        CompareExpr();
+        IToken first = t;
+        Expr left = null;
+        left = CompareExpr();
+        Expr right = null;
         while(t.getKind() == AND || t.getKind() == BITAND)
         {
             switch(t.getKind())
             {
                 case AND,BITAND ->
                 {
+                    IToken op = t;
                     consume();
-                   CompareExpr();
+                   right = CompareExpr();
+                   left = new BinaryExpr(first,left,op.getKind(),right);
                 }
                 default ->
                 {
@@ -164,19 +204,24 @@ public class Parse implements IParser {
             }
 
         }
-
+    return left;
     }
-    public void ORExpr() throws PLCException
+    public Expr ORExpr() throws PLCException
     {
-        ANDExpr();
+        IToken first = t;
+        Expr left = null;
+        left = ANDExpr();
+        Expr right = null;
         while(t.getKind() == OR || t.getKind() == BITOR)
         {
             switch(t.getKind())
             {
                 case OR,BITOR->
                 {
+                    IToken op = t;
                     consume();
-                    ANDExpr();
+                    right = ANDExpr();
+                    left = new BinaryExpr(first,left,op.getKind(),right);
                 }
                 default ->
                 {
@@ -185,43 +230,52 @@ public class Parse implements IParser {
             }
 
         }
-
+        return left;
     }
-    public void ConditionalExpr() throws PLCException
+    public Expr ConditionalExpr() throws PLCException
     {
+        IToken first = t;
+        Expr guard = null;
+        Expr TRUE = null;
+        Expr FALSE = null;
+
         switch(t.getKind())
         {
             case RES_if ->
             {
                 consume();
-                Expr();
+                guard = Expr();
                 match(QUESTION);
-                Expr();
+                TRUE = Expr();
                 match(QUESTION);
-                Expr();
+                FALSE = Expr();
+                guard = new ConditionalExpr(first,guard,TRUE,FALSE);
             }
             default ->
             {
                 PLCerror("expected a Predict set of CONDITIONAL: if ");
             }
         }
-
+ return guard;
     }
-    public void Expr() throws PLCException
+    public Expr Expr() throws PLCException
     {
+        IToken first = t;
+        Expr parse;
+        parse = null;
 
         switch(t.getKind())
         {
             case RES_if ->
             {
-                ConditionalExpr();
+               parse = ConditionalExpr();
             }
             default ->
             {
-               ORExpr();
+              parse = ORExpr();
             }
         }
-
+            return parse;
     }
 
 
@@ -245,7 +299,7 @@ public class Parse implements IParser {
 
     }
     private void PLCerror(String message) throws PLCException{
-        throw new LexicalException("Parsing error at : " + t.getSourceLocation() + ": type->" + message);
+        throw new SyntaxException("Parsing error at : " + t.getSourceLocation() + ": type->" + message);
     }
 
 
