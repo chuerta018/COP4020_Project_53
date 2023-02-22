@@ -144,7 +144,7 @@ public class Parse implements IParser {
             {
                 IToken op = t;
                 consume();
-                right = AdditiveExpr();
+                right = PowerExpr();
                 left = new BinaryExpr(first,left,op.getKind(),right);
             }
             default ->
