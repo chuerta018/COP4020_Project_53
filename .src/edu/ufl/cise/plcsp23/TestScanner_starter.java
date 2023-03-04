@@ -40,7 +40,7 @@ class TestScanner_starter{
 	 * @throws PLCException
 	 */
 	AST getAST(String input) throws  PLCException {
-		return  CompilerComponentFactory.makeAssignment2Parser(input).parse();
+		return  CompilerComponentFactory.makeAssigment2Parser(input).parse();
 	}
 	/**
 	 * Checks that the given AST e has type NumLitExpr with the indicated value.

@@ -62,7 +62,7 @@ class Assignment3Test_starter {
 	 * @throws PLCException
 	 */
 	AST getAST(String input) throws PLCException {
-		return CompilerComponentFactory.makeParser(input).parse();
+		return CompilerComponentFactory.makeAssigment2Parser(input).parse();
 	}
 
 	/**

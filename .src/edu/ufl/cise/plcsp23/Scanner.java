@@ -429,6 +429,10 @@ public class Scanner implements IScanner
         reservedWords.put("atan", RES_atan);
         reservedWords.put("if", RES_if);
         reservedWords.put("while", RES_while);
+        reservedWords.put("red", RES_red);
+        reservedWords.put("grn", RES_grn);
+        reservedWords.put("blu", RES_blu);
+
 
     }
     private boolean isDigit(int ch) {
