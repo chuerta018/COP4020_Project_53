@@ -2,6 +2,9 @@ package edu.ufl.cise.plcsp23;
 
 import edu.ufl.cise.plcsp23.ast.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static edu.ufl.cise.plcsp23.IToken.Kind.*;
 
 public class Parse implements IParser {
@@ -13,7 +16,7 @@ public class Parse implements IParser {
     @Override
     public AST parse() throws PLCException {
 
-        return Expr();
+        return program();
     }
 
     //=======  Constructor  =======//
@@ -25,41 +28,54 @@ public class Parse implements IParser {
 
     //======= Methods of PA2 AND PA3 =======//
     // ======= PA3 function Manipulation and New function  ========//
-    public void ExpandedPixel() throws PLCException
+    public Expr expandedPixel() throws PLCException
     {
+        IToken first = t;
+        Expr one = null;
+        Expr two = null;
+        Expr three = null;
+
         switch(t.getKind())
         {
             case LSQUARE ->
             {
                 consume();
-                Expr();
+                one = Expr();
                 match(COMMA);
-                Expr();
+                two = Expr();
+                match(COMMA);
+                three = Expr();
                 match(RSQUARE);
+                one = new ExpandedPixelExpr(first,one,two,three);
             }
             default ->
             {
             PLCerror("ExpandedPixel() Predict Set wrong, expected [ but got : " + t.getKind());
             }
         }
-
+            return one;
     }
 
-    public void PixelFuntionExpr() throws PLCException
+    public Expr PixelFuntionExpr() throws PLCException
     {
+        IToken first = t;
+        PixelSelector ps = null;
         switch(t.getKind())
         {
             case RES_x_cart,RES_y_cart,RES_a_polar,RES_r_polar ->
             {
-                consume();
-                PixelSelector();
+              IToken tokenKind = t;
+              consume();
+              ps = PixelSelector();
+
+              return new PixelFuncExpr(first, tokenKind.getKind(), ps);
             }
             default ->
             {
                 PLCerror("PixelFunctionExpr() Predict Set wrong, expected x cart | y cart |  a polar | r polar  but got : " + t.getKind());
             }
         }
-
+        return null;
     }
 
 
@@ -95,13 +111,18 @@ public class Parse implements IParser {
                 e = new RandomExpr(t);
                 consume();
             }
+            case RES_x,RES_a,RES_y,RES_r ->
+            {
+                e = new PredeclaredVarExpr(t);
+                consume();
+            }
             case RES_x_cart,RES_y_cart,RES_a_polar,RES_r_polar->
             {
-                PixelFuntionExpr();
+                e = PixelFuntionExpr();
             }
-            case RSQUARE ->
+            case LSQUARE ->
             {
-                ExpandedPixel();
+               e = expandedPixel();
             }
             default -> PLCerror("expected a Predict set of PrimaryExpress IN PRIMARY: string| num | indent | ( | rand |z");
         }
@@ -109,26 +130,35 @@ public class Parse implements IParser {
     }
 
 
-    public void unaryExprPostFix() throws PLCException
+    public Expr unaryExprPostFix() throws PLCException
     {
+        IToken first = t;
+        Expr prime = null;
+        PixelSelector ps = null;
+        ColorChannel cc = null;
 
-    PrimaryExpr();
-        switch(t.getKind())
+        prime = PrimaryExpr();
+
+        if(t.getKind() == LSQUARE)
         {
-                case RPAREN ->
-                {
-                    PixelSelector();
-
-                }
-                case COLON ->
-                {
-                    ChannelSelector();
-                }
-                default ->
-                {
-                    //return a null ast tree here to notify its empty
-                }
+            ps = PixelSelector();
         }
+
+        if(t.getKind() == COLON)
+        {
+            consume();
+
+            if(t.getKind() != RES_grn && t.getKind() != RES_red && t.getKind() != RES_blu )
+                PLCerror("ChannelSelector not valid");
+
+            cc = cc.getColor(t);
+            consume();
+        }
+
+        if(ps == null && cc == null)
+            return prime;
+
+        return new UnaryExprPostfix(first,prime,ps,cc);
     }
 
     public Expr unaryExpr() throws PLCException {
@@ -144,7 +174,7 @@ public class Parse implements IParser {
             }
             default ->
             {
-                    e = PrimaryExpr(); //CHANGE THIS PRIMARY TO UNARYPOST Fix after AST IMPLEMENT
+                    e = unaryExprPostFix(); //CHANGE THIS PRIMARY TO UNARYPOST Fix after AST IMPLEMENT
             }
         }
         return e;
@@ -352,267 +382,296 @@ public class Parse implements IParser {
     }
 
     //========== PA3 Grammar Functions JUST PARSE NO ==========//
-    public void Type() throws PLCException
-    {
-        switch(t.getKind())
-        {
-            case RES_image->{
-                consume();
-            }
-            case RES_pixel -> {
-                consume();
-            }
-            case RES_int ->{
-                consume();
-            }
-            case RES_string->
-            {
-                consume();
-            }
-            case RES_void -> {
-                consume();
-            }
-            default -> PLCerror("expected a Predict set of PrimaryExpress IN PRIMARY: string| num | indent | ( | rand |z");
-        }
-    }
 
-
-    public void Dimension() throws PLCException
+    public Dimension dimension() throws PLCException
     {
 
+        IToken first = t;
+        Expr w = null;
+        Expr h = null;
         switch(t.getKind())
         {
             case LSQUARE->{
                 consume();
-                Expr();
+                w = Expr();
                 match(COMMA);
-                Expr();
+                h= Expr();
                 match(RSQUARE);
+                return new Dimension(first,w,h);
             }
             default -> {
-                PLCerror("Error in Dimension: There is no [ but yet this was called?");
+                return null;
             }
         }
     }
 
 
-    public void NameDef() throws PLCException
+    public NameDef nameDef() throws PLCException
     {
-        Type();
+        IToken first = t;
+        Type type;
+        Ident ident;
+        Dimension dimension = null;
+        type = Type.getType(first);
+
+        consume();
         switch(t.getKind())
         {
-            case IDENT->{
-                consume();
-            }
-            default -> {
-                Dimension();
-                match(IDENT);
-            }
-        }
-    }
-    public void ParamList() throws PLCException  // likely to cause errors tbh I wanna say it works
-    {
-        try {
-            NameDef();
-            while (t.getKind() == COMMA)
+            case IDENT->
             {
+                ident = new Ident(t);
                 consume();
-                NameDef();
+                return new NameDef(first,type,dimension,ident);
             }
+            default ->
+            {
 
-        } catch (PLCException e) {
-            // return a null AST tree corresponding to it's abstract syntax.
+                dimension = dimension();
+                if(t.getKind() == IDENT)
+                {
+                 ident = new Ident(t);
+                 consume();
+                 return new NameDef(first,type,dimension,ident);
+                 }else
+                 {
+                 PLCerror("not an Ident in function call nameDEF");
+                 }
+             }
 
         }
+        return null;
+        }
 
+    public List<NameDef> ParamList(List<NameDef> ndList) throws PLCException  // likely to cause errors tbh I wanna say it works
+    {
+        NameDef nd = null;
+
+        switch(t.getKind())
+        {
+            case RES_image, RES_pixel, RES_int, RES_string, RES_void ->
+            {
+
+                nd = nameDef();
+                ndList.add(nd);
+                while (t.getKind() == COMMA)
+                {
+                    consume();
+                    nd = nameDef();
+                    ndList.add(nd);
+                }
+            }
+        }
+        return ndList;
     }
 
-    public void Declaration() throws PLCException
+    public Declaration declaration() throws PLCException
     {
-        NameDef();
+        IToken first = t;
+        NameDef nd;
+        Expr e;
+        nd = nameDef();
         switch(t.getKind())
         {
             case ASSIGN->{
                 consume();
-                Expr();
+                e= Expr();
+                return new Declaration(first,nd,e);
             }
             default -> {
-                //RETURN THE nameDef(); at the beginning when implementing ast
+               return new Declaration(first,nd,null);
             }
         }
     }
 
-    public void ChannelSelector() throws PLCException
+    public PixelSelector PixelSelector() throws PLCException
     {
-        switch(t.getKind())
-        {
-            case COLON->{
+        IToken first  = t;
+        Expr x = null;
+        Expr y = null;
+        PixelSelector ps = null;
 
-                switch(t.getKind())
-                {
-                    case RES_red,RES_grn,RES_blu ->
-                    {
-                        consume();
-                    }
-                    default ->
-                    {
-                        PLCerror("ChannelSelector got the right predict Set but following token was not the reserve words:  red | grn | blu");
-                    }
-                }
-            }
-            default -> {
-                PLCerror("ChannelSelector() expected Predict set of : COLON instead got kind: " +t.getKind());
-            }
-        }
-    }
-
-    public void PixelSelector() throws PLCException
-    {
         switch(t.getKind())
         {
             case LSQUARE->{
                 consume();
-                Expr();
+                x = Expr();
                 match(COMMA);
-                Expr();
-                match(RPAREN);
+                y = Expr();
+                match(RSQUARE);
+               ps = new PixelSelector(t,x,y);
             }
             default -> {
                 PLCerror("PixelSelector() expected Predict set of : LParen instead got kind: " +t.getKind());
             }
         }
+        return ps;
     }
 
 
-    public void LValue() throws PLCException
+    public LValue lValue() throws PLCException
     {
+        IToken first = t;
+        LValue emptyCase = null;
+        PixelSelector ps = null;
+        ColorChannel cc = null;
+        Ident ident = null;
 
         switch(t.getKind())
         {
             case IDENT->
             {
-                switch(t.getKind())
-                {
-                    case RPAREN ->
-                    {
-                        PixelSelector();
+                ident = new Ident(t);
+                consume();
 
-                    }
-                    case COLON ->
-                    {
-                        ChannelSelector();
-                    }
-                    default ->
-                    {
-                    //return a null ast tree here to notify its empty
-                    }
+                if(t.getKind() == LSQUARE)
+                {
+                    ps = PixelSelector();
                 }
+
+                if(t.getKind() == COLON)
+                {
+                    consume();
+
+                    if(t.getKind() != RES_grn && t.getKind() != RES_red && t.getKind() != RES_blu )
+                        PLCerror("ChannelSelector not valid");
+
+                    cc = cc.getColor(t);
+                    consume();
+                }
+                return new LValue(first,ident,ps,cc);
             }
             default ->
             {
               PLCerror("Lvalue() predict set expected IDENT ,Instead got Kind: " + t.getKind());
             }
         }
+        return emptyCase;
     }
-    public void Statement() throws PLCException
+    public Statement statement() throws PLCException
     {
+        IToken first = t;
+        Expr e = null;
+        Statement s = null;
+        LValue lv = null;
+        Block b = null;
 
         switch(t.getKind())
         {
             case IDENT->
             {
-                LValue();
+                lv = lValue();
                 match(ASSIGN);
-                Expr();
+                e = Expr();
+                return new AssignmentStatement(first,lv,e);
             }
             case RES_write ->
             {
-                Expr();
+                consume();
+                e = Expr();
+                return new WriteStatement(first,e);
             }
             case RES_while ->
             {
-                Expr();
-                Block();
+                consume();
+                e = Expr();
+                b = block();
+                return new WhileStatement(first,e,b);
             }
             default ->
             {
-                PLCerror("Statement predict set was not either  IDENT, write, while. Instead got kind: " + t.getKind());
+               return s;
             }
         }
     }
 
-    public void StatementList() throws PLCException
+    public List<Statement> StatementList( List<Statement> sList) throws PLCException
     {
-
         while(t.getKind() == IDENT || t.getKind() == RES_write || t.getKind() == RES_while )
         {
-            Statement();
+            sList.add(statement());
             match(DOT);
         }
 
-        //WHEN implementing ast tree return AST in while loop or NULL outside the loop
-
+        return sList;
     }
 
-    public void DecList() throws PLCException
+    public List<Declaration> DecList(List<Declaration> dList) throws PLCException
     {
 
         while(t.getKind() == RES_image|| t.getKind() == RES_pixel || t.getKind() == RES_int || t.getKind() == RES_string || t.getKind() == RES_void )
         {
-           Declaration();
+           dList.add(declaration());
             match(DOT);
         }
+        return dList;
 
         //WHEN implementing ast tree return AST in while loop or NULL outside the loop
 
     }
 
-    public void Block() throws PLCException
+    public  Block block() throws PLCException
     {
+        IToken first = t;
+        List<Declaration> dList = new ArrayList<Declaration>();
+        List<Statement> sList = new ArrayList<Statement>();
+
         switch(t.getKind())
         {
             case LCURLY->
             {
                 consume();
-                DecList();
-                StatementList();
-                match(RPAREN);
+                DecList(dList);
+                StatementList(sList);
+                match(RCURLY);
+
+                return new Block(first,dList,sList);
             }
             default ->
             {
                 PLCerror("Block() predict set was not either  { . Instead got kind: " + t.getKind());
             }
         }
+        return null;
     }
 
-    public void Program() throws PLCException
+    public Program program() throws PLCException
     {
-        Type();
-        match(IDENT);
-        match(LPAREN);
-        ParamList();
-        match(RPAREN);
-        Block();
+        IToken first = t;
+        Type type;
+        Ident ident;
+        List<NameDef> ndList = new ArrayList<NameDef>();
+        Block b;
+
+        switch(t.getKind())
+        {
+            case RES_image, RES_pixel, RES_int, RES_string, RES_void ->
+            {
+                type = Type.getType(t);
+                consume();
+
+                if(t.getKind() == IDENT)
+                {
+                    ident = new Ident(t);
+                    consume();
+                    match(LPAREN);
+                    ParamList(ndList);
+                    match(RPAREN);
+                    b = block();
+
+                    return new Program(first,type,ident,ndList,b);
+                }else
+                {
+                    PLCerror("Program error: type throws an runtime error... this maybe doesnt ever get reached");
+                }
+            }
+            default->
+            {
+
+                PLCerror("Type is not valid type enum in Program");
+            }
+        }
+        return null;
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     //======= Helper functions =======//
@@ -629,14 +688,12 @@ public class Parse implements IParser {
 
     }
 
-
-
     void consume() throws PLCException{
         t = myScanner.next();
     }
 
     private void PLCerror(String message) throws PLCException{
-        throw new SyntaxException("Parsing error at : " + t.getSourceLocation() + ": type->" + message);
+        throw new SyntaxException("Parsing error at : " + t.getSourceLocation() + ": type->" + message + ":ITOKEN here -> " + t.getKind());
     }
 
 
