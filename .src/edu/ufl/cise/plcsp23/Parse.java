@@ -658,7 +658,11 @@ public class Parse implements IParser {
                     match(RPAREN);
                     b = block();
 
+                    if (t.getKind() == EOF)
                     return new Program(first,type,ident,ndList,b);
+                    else
+                        PLCerror("Program error: type throws an runtime error... this maybe doesnt ever get reached");
+
                 }else
                 {
                     PLCerror("Program error: type throws an runtime error... this maybe doesnt ever get reached");
