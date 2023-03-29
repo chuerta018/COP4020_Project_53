@@ -10,14 +10,12 @@
 
 package edu.ufl.cise.plcsp23;
 
-import static org.junit.jupiter.api.Assertions.*;
-
-import org.junit.jupiter.api.Test;
-
 import edu.ufl.cise.plcsp23.ast.AST;
 import edu.ufl.cise.plcsp23.ast.ASTVisitor;
-import edu.ufl.cise.plcsp23.javaCompilerClassLoader.DynamicClassLoader;
-import edu.ufl.cise.plcsp23.javaCompilerClassLoader.DynamicCompiler;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 
 class TestScanner_starter {
 	
