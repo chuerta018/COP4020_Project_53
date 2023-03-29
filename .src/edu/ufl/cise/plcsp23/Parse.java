@@ -577,6 +577,13 @@ public class Parse implements IParser {
                 b = block();
                 return new WhileStatement(first,e,b);
             }
+            case COLON ->
+            {
+                consume();
+                e = Expr();
+                return new ReturnStatement(first,e);
+
+            }
             default ->
             {
                return s;
@@ -586,7 +593,7 @@ public class Parse implements IParser {
 
     public List<Statement> StatementList( List<Statement> sList) throws PLCException
     {
-        while(t.getKind() == IDENT || t.getKind() == RES_write || t.getKind() == RES_while )
+        while(t.getKind() == IDENT || t.getKind() == RES_write || t.getKind() == RES_while || t.getKind() == COLON )
         {
             sList.add(statement());
             match(DOT);
@@ -697,7 +704,7 @@ public class Parse implements IParser {
     }
 
     private void PLCerror(String message) throws PLCException{
-        throw new SyntaxException("Parsing error at : " + t.getSourceLocation() + ": type->" + message + ":ITOKEN here -> " + t.getKind());
+        throw new PLCException("Parsing error at : " + t.getSourceLocation() + ": type->" + message + ":ITOKEN here -> " + t.getKind());
     }
 
 
