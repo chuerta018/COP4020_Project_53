@@ -27,7 +27,10 @@ public class CompilerComponentFactory {
 	public static ASTVisitor makeTypeChecker() throws LexicalException {
 		return new TypeChecker();
 	}
-
+	
+	public static ASTVisitor makeCodeGenerator() {
+	//code to instantiate a return an ASTVisitor for code generation
+	}
 
 
 
