@@ -14,6 +14,7 @@ import edu.ufl.cise.plcsp23.PLCException;
 
 public interface ASTVisitor {
 
+
 	Object visitAssignmentStatement(AssignmentStatement statementAssign, Object arg) throws PLCException;
 
 	Object visitBinaryExpr(BinaryExpr binaryExpr, Object arg) throws PLCException;
