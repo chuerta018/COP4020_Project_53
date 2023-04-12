@@ -12,6 +12,7 @@ package edu.ufl.cise.plcsp23.runtime;
 
 import java.io.PrintStream;
 
+
 public class ConsoleIO {
 
 	/**
