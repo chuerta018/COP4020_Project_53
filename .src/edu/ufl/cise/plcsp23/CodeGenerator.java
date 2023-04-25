@@ -35,16 +35,49 @@ public class CodeGenerator implements ASTVisitor {
     StringBuilder JavaClass = new StringBuilder();
     Program rootNode;
 
+    static boolean fromDec = false;
+    static boolean fromAssign =  false;
+    static boolean fromCond = false;
+    static boolean fromReturn = false;
+
+
 
     Stack<Integer> scope_stack= new Stack<Integer>();
     int curr = 0;
     int num = 1; //next serial number to assign
     void enterScope()
-    { curr= num++;
+    {
         scope_stack.push(curr);
+        curr= num;
+        num++;
+
+
     }
     void closeScope()
-    { curr = scope_stack.pop();
+    { curr = (int)scope_stack.pop();
+    }
+
+
+    NameDef loopUpScope (String name)
+    {
+
+        int scope = curr;
+
+    if( curr != 0)
+    {
+
+        for(int i = 0 ; i < scope_stack.size(); i++)
+        {
+            if(symbolTable.lookup(name+"_" +scope) != null)
+                return symbolTable.lookup(name+"_" +scope);
+
+                scope = scope_stack.elementAt(i);
+
+        }
+
+    }
+
+    return symbolTable.lookup(name);
     }
     Vector<String> imported = new Vector<String>();
     CodeGenerator(String _packageName)
@@ -53,11 +86,16 @@ public class CodeGenerator implements ASTVisitor {
     }
     @Override
     public Object visitAssignmentStatement(AssignmentStatement statementAssign, Object arg) throws PLCException {
-        NameDef name = symbolTable.lookup(statementAssign.getLv().getIdent().getName());
+       NameDef name = loopUpScope(statementAssign.getLv().getIdent().getName());
+       /* if(curr == 0)
+        name = symbolTable.lookup(statementAssign.getLv().getIdent().getName());
+        else name = symbolTable.lookup(statementAssign.getLv().getIdent().getName() +"_" +curr);
+*/
         boolean type = true;
        StringBuilder temp = new StringBuilder();
        temp.append(statementAssign.getLv().visit(this,arg));
        temp.append(" = ");
+       fromAssign = true;
         if(statementAssign.getE().getType() != name.getType()) {
             if (appendType(name.getType()).equals("String"))
             {
@@ -69,35 +107,14 @@ public class CodeGenerator implements ASTVisitor {
                 temp.append("(" + appendType(name.getType()) + ") ");
 
         }
+        if(statementAssign.getE() != null)
+        temp.append(statementAssign.getE().visit(this, arg));
 
-        if(statementAssign.getE() instanceof  BinaryExpr)
-        {
-            switch( ((BinaryExpr) statementAssign.getE()).getOp())
-            {
-                case GT,GE,LT,LE,EQ  ->
-                {
-                    temp.append(statementAssign.getE().visit(this, arg) + " ? 1 : 0");
-                }
-                case OR,AND->
-                {
-                    temp.append("(");
-                    temp.append(statementAssign.getE().visit(this,arg) + " != 0) " + " ? 1 : 0");
-                }
-                default ->
-                {
-                    temp.append(statementAssign.getE().visit(this, arg));
-                }
-            }
-
-
-        }else {
-            temp.append(statementAssign.getE() .visit(this, arg));
-        }
     if(type == false)
     {
         temp.append(")");
     }
-
+fromAssign = false;
         return temp.toString();
     }
 
@@ -115,19 +132,76 @@ public class CodeGenerator implements ASTVisitor {
         {
             case EXP ->
             {
+
                 addVector("import java.lang.Math;");
-                temp.append("(int)Math.pow(" + (String)binaryExpr.getLeft().visit(this,arg) + ", " + (String)binaryExpr.getRight().visit(this,arg) + "))");
+                temp.append("(int)Math.pow(" + (String)binaryExpr.getLeft().visit(this,arg) + ", " + (String)binaryExpr.getRight().visit(this,arg) + ")");
+
+                if(fromCond)
+                    temp.append(" != 0");
+            }
+            case GT,GE,LT,LE,EQ ->
+            {
+                if((fromDec || fromAssign || fromReturn) && !fromCond)
+                {
+
+
+                    temp.append("(");
+                    temp.append((String) binaryExpr.getLeft().visit(this, arg));
+                    temp.append(appendKind(op));
+                    temp.append((String) binaryExpr.getRight().visit(this, arg));
+                    temp.append(") ? 1 : 0");
+
+                }
+                else
+                {
+                    temp.append((String) binaryExpr.getLeft().visit(this, arg));
+                    temp.append(appendKind(op));
+                    temp.append((String) binaryExpr.getRight().visit(this, arg));
+
+                }
+
+            }
+            case OR,AND -> {
+                if (((fromDec || fromAssign || fromReturn ) && !fromCond))
+                {
+
+                    temp.append("((");
+                    temp.append((binaryExpr.getLeft().visit(this, arg)));
+                    temp.append(" != 0) " + appendKind(op));
+                    temp.append("("+ binaryExpr.getRight().visit(this,arg) +" != 0)");
+                    temp.append(") ? 1 : 0");
+
+
+                }else if(fromReturn && fromCond)
+                {
+
+                    temp.append("((");
+                    temp.append((binaryExpr.getLeft().visit(this, arg)));
+                    temp.append(" != 0) " + appendKind(op));
+                    temp.append("("+ binaryExpr.getRight().visit(this,arg) +" != 0)");
+                    temp.append(")");
+
+                }
+                else
+                {
+                    temp.append((String) binaryExpr.getLeft().visit(this, arg));
+                    temp.append(appendKind(op));
+                    temp.append((String) binaryExpr.getRight().visit(this, arg));
+                }
+
             }
             default ->
             {
                 temp.append((String) binaryExpr.getLeft().visit(this, arg));
                 temp.append(appendKind(op));
                 temp.append((String) binaryExpr.getRight().visit(this, arg));
-                temp.append(")");
+
             }
         }
 
 
+
+        temp.append(")");
         //does not include boolean thing
 
         return temp.toString();
@@ -136,7 +210,7 @@ public class CodeGenerator implements ASTVisitor {
     @Override
     public Object visitBlock(Block block, Object arg) throws PLCException {
        StringBuilder temp = new StringBuilder();
-       enterScope();
+
 
         List<Declaration> dec = block.getDecList();
 
@@ -151,7 +225,7 @@ public class CodeGenerator implements ASTVisitor {
             temp.append(node.visit(this, arg));
             temp.append(";\n");
         }
-        closeScope();
+
         return temp.toString();
     }
 
@@ -159,6 +233,7 @@ public class CodeGenerator implements ASTVisitor {
     public Object visitConditionalExpr(ConditionalExpr conditionalExpr, Object arg) throws PLCException {
 
         StringBuilder temp = new StringBuilder();
+        fromCond = true;
         temp.append("(");
 
         if(conditionalExpr.getGuard() instanceof BinaryExpr) {
@@ -171,6 +246,7 @@ public class CodeGenerator implements ASTVisitor {
 
         temp.append(" ? " + conditionalExpr.getTrueCase().visit(this,arg) +" : " + conditionalExpr.getFalseCase().visit(this,arg));
         temp.append(")");
+        fromCond = false;
 // does not do the boolean thingy
         return temp.toString();
     }
@@ -180,6 +256,8 @@ public class CodeGenerator implements ASTVisitor {
         StringBuilder temp = new StringBuilder();
         temp.append(visitNameDef(declaration.getNameDef(),arg));
         boolean type = true;
+        fromDec = true;
+
 
 
         if(declaration.getInitializer() != null)
@@ -196,30 +274,16 @@ public class CodeGenerator implements ASTVisitor {
                 temp.append("("+ appendType(declaration.getNameDef().getType())+ ") ");
             }
 
-            if(declaration.getInitializer() instanceof  BinaryExpr)
-            {
-                switch(((BinaryExpr) declaration.getInitializer()).getOp())
-                {
-                    case GT,GE,LT,LE,EQ,OR,AND ->
-                    {
-                        temp.append(declaration.getInitializer().visit(this, arg) + " ? 1 : 0");
-                    }
-                    default ->
-                    {
-                        temp.append(declaration.getInitializer().visit(this, arg));
-                    }
-                }
-
-
-            }else {
-                temp.append(declaration.getInitializer().visit(this, arg));
-            }
+            temp.append(declaration.getInitializer().visit(this, arg));
 
         }
+
+
 
         if(type == false)
             temp.append(")");
 
+        fromDec = false;
         return temp.toString();
     }
 
@@ -235,13 +299,42 @@ public class CodeGenerator implements ASTVisitor {
 
     @Override
     public Object visitIdent(Ident ident, Object arg) throws PLCException {
-        return ident.getName();
+        StringBuilder temp = new StringBuilder();
+
+        if(curr != 0)
+        {
+            if(symbolTable.lookup(ident.getName() +"_"+curr)!=null)
+            temp.append(ident.getName() +"_"+curr);
+            else
+                temp.append(ident.getName());
+
+
+        }else
+        {
+            temp.append(ident.getName());
+        }
+
+        return temp.toString();
+
     }
 
     @Override
     public Object visitIdentExpr(IdentExpr identExpr, Object arg) throws PLCException {
 
-        return (String)identExpr.getName();
+        StringBuilder temp = new StringBuilder();
+
+        if(curr != 0)
+        {
+            if(symbolTable.lookup(identExpr.getName() +"_"+curr)!=null)
+                temp.append(identExpr.getName() +"_"+curr);
+            else
+                temp.append(identExpr.getName());
+
+        }else
+        {
+            temp.append(identExpr.getName());
+        }
+        return temp.toString();
     }
 
     @Override
@@ -258,7 +351,10 @@ public class CodeGenerator implements ASTVisitor {
         StringBuilder temp = new StringBuilder();
 
         if(!inserted)
+        {
+            symbolTable.insert((name+"_"+curr),nameDef);
             temp.append(appendType(nameDef.getType())+" "+ nameDef.getIdent().getName() +"_" + curr);
+        }
           else
             temp.append(appendType(nameDef.getType())+" "+ nameDef.getIdent().getName());
 
@@ -348,6 +444,7 @@ public class CodeGenerator implements ASTVisitor {
     public Object visitReturnStatement(ReturnStatement returnStatement, Object arg) throws PLCException {
         StringBuilder temp = new StringBuilder();
         boolean type = true;
+        fromReturn =  true;
         temp.append("return ");
 
         if(rootNode.getType() != returnStatement.getE().getType())
@@ -362,10 +459,9 @@ public class CodeGenerator implements ASTVisitor {
             } else
                 temp.append("(" + appendType(rootNode.getType()) + ") " + returnStatement.getE().visit(this, arg));
         }
-
+/*
         if(returnStatement.getE() instanceof BinaryExpr)
         {
-
             switch(((BinaryExpr) returnStatement.getE()).getOp())
             {
                 case GT,GE,LT,LE,EQ,AND,OR ->
@@ -374,16 +470,15 @@ public class CodeGenerator implements ASTVisitor {
                 }
                 default -> temp.append(returnStatement. getE().visit(this,arg));
             }
-
-
-
-
         }else
-        temp.append(returnStatement. getE().visit(this,arg));
+        */
+
+            temp.append(returnStatement. getE().visit(this,arg));
 
         if(type == false)
             temp.append(")");
 
+        fromReturn =  false;
         return temp.toString();
     }
 
@@ -408,6 +503,7 @@ public class CodeGenerator implements ASTVisitor {
     public Object visitWhileStatement(WhileStatement whileStatement, Object arg) throws PLCException {
        StringBuilder temp = new StringBuilder();
 
+
         if(whileStatement.getGuard() instanceof BinaryExpr){
             switch(((BinaryExpr) whileStatement.getGuard()).getOp())
             {
@@ -425,8 +521,9 @@ public class CodeGenerator implements ASTVisitor {
         {
             temp.append("while (" + whileStatement.getGuard().visit(this,arg) + " != 0){\n");
         }
-
+        enterScope();
         temp.append(whileStatement.getBlock().visit(this,arg)+"\n}");
+        closeScope();
 
 // does not do boolean thing and redeclare variables?!
         return temp.toString();
@@ -443,6 +540,7 @@ public class CodeGenerator implements ASTVisitor {
 
     @Override
     public Object visitZExpr(ZExpr zExpr, Object arg) throws PLCException {
+
         return "255";
     }
 
@@ -483,7 +581,6 @@ public class CodeGenerator implements ASTVisitor {
     public static String appendKind(IToken.Kind kind)
     {
         StringBuilder toJava = new StringBuilder();
-
         switch(kind)
         {
             case MINUS ->
@@ -500,6 +597,10 @@ public class CodeGenerator implements ASTVisitor {
             }
             case EQ ->
             {
+                if(fromDec)
+                {
+
+                }
                 toJava.append(" == ");
             }
             case GT ->
@@ -510,86 +611,42 @@ public class CodeGenerator implements ASTVisitor {
             {
                 toJava.append(" % ");
             }
-            case IDENT -> {}
             case TIMES ->
             {
                 toJava.append(" * ");
             }
-            case LSQUARE ->{}
-            case COMMA -> {}
-            case RES_x ->{}
             case LT ->
             {
 
                 toJava.append(" < ");
             }
-            case RES_y ->{}
+
             case AND ->
             {
                 toJava.append(" && ");
             }
-            case BANG ->{}
+
             case BITOR ->
             {
                 toJava.append(" | ");
             }
-            case COLON ->{}
             case BITAND ->
             {
                 toJava.append(" & ");
             }
-            case RES_int ->{}
-            case RES_void ->{}
-            case RES_image ->{}
-            case RES_pixel ->{}
-            case RES_string ->{}
             case GE ->
             {
                 toJava.append(" >= ");
             }
-            case RES_a_polar ->{}
-            case RES_r_polar ->{}
             case LE ->
             {
                 toJava.append(" <= ");
             }
-            case RES_while ->{}
             case OR ->
             {
                 toJava.append(" || ");
             }
-            case RES_blu ->{}
-            case RES_write ->{}
-            case RES_cos ->{}
-            case RES_grn ->{}
-            case RES_red -> {}
-            case RES_sin ->{}
-            case RSQUARE ->{}
-            case RES_atan ->{}
-            case RES_x_cart ->{}
-            case RES_y_cart -> {}
-            case DOT ->{}
-            case RES_a ->{}
-            case RES_r ->{}
-            case ASSIGN ->{}
-            case LPAREN -> {}
-            case RES_if ->{}
-            case RPAREN ->{}
-            case NUM_LIT ->{}
-            case QUESTION ->{}
-            case EOF ->{}
-            case RES_Z ->{}
-            case LCURLY ->{}
-            case RCURLY ->{}
-            case RES_rand ->{}
-            case STRING_LIT ->{}
-            case RES_X ->{}
-            case RES_Y -> {}
-            case RES_nil ->{}
-            case EXCHANGE ->{}
-            case RES_load ->{}
-            case RES_display ->{}
-            case ERROR ->{}
+
             default ->
             {
                 throw new RuntimeException(" some issue tbh");

@@ -10,32 +10,6 @@ import static edu.ufl.cise.plcsp23.ast.Type.*;
 
 public class TypeChecker implements  ASTVisitor {
 
-/*
-
-    public static class Pair
-    {
-        NameDef namedef;
-        int scope;
-        Pair(NameDef _nameDef, int _scope)
-        {
-            namedef = _nameDef;
-            scope = _scope;
-        }
-
-        public int getScope()
-        {
-            return scope;
-        }
-
-        public NameDef getPairName()
-        {
-            return namedef;
-        }
-
-    }
-*/
-
-
 
     public static class SymbolTable
     {
@@ -83,17 +57,24 @@ public class TypeChecker implements  ASTVisitor {
     }
 
 
-    public NameDef lookup(String name)
+    public NameDef lookupScope(String name)
     {
-        for(int i = ourTables.size()-1; i>=0; i--)
-        {
-          if (ourTables.get(i).lookup(name) != null )
-          {
-              return ourTables.get(i).lookup(name);
-          }
-        }
+       if(symbolTable.lookup(name) == null)
+       {
 
-        return null;
+           for(int i = ourTables.size()-1; i>=0; i--)
+           {
+               if (ourTables.get(i).lookup(name) != null )
+               {
+                   return ourTables.get(i).lookup(name);
+               }
+           }
+
+       }
+
+
+
+        return symbolTable.lookup(name);
     }
 
 
@@ -304,7 +285,7 @@ public class TypeChecker implements  ASTVisitor {
     @Override
     public Object visitLValue(LValue lValue, Object arg) throws PLCException {
         visitIdent(lValue.getIdent(),arg);
-        NameDef name = lookup(lValue.getIdent().getName());
+        NameDef name = lookupScope(lValue.getIdent().getName());
         Type identType = name.getType();
         PixelSelector ps =  lValue.getPixelSelector();
         ColorChannel cc = lValue.getColor();
@@ -426,7 +407,7 @@ public class TypeChecker implements  ASTVisitor {
     @Override
     public Object visitIdentExpr(IdentExpr identExpr, Object arg) throws PLCException {
         String name = identExpr.getName();
-        NameDef dec = lookup(name);
+        NameDef dec = lookupScope(name);
         check(dec != null, "undefined identifier " + name);
         Type type = dec.getType();
         identExpr.setType(type);
@@ -446,7 +427,7 @@ public class TypeChecker implements  ASTVisitor {
 
     @Override
     public Object visitIdent(Ident ident, Object arg) throws PLCException {
-        NameDef dec = lookup(ident.getName());
+        NameDef dec = lookupScope(ident.getName());
         check(dec != null, "undefined identifier " + ident.getName());
 
             return null;
@@ -561,7 +542,6 @@ public class TypeChecker implements  ASTVisitor {
         boolean inserted = symbolTable.insert(name, nameDef);
 
         check(inserted, "variable " + name + " already declared");
-       check(symbolTable.size() != 0,"empty");
         check(nameDef.getType() != VOID, "Error it was void NameDef");
 
 
