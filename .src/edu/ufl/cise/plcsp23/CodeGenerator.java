@@ -87,16 +87,15 @@ public class CodeGenerator implements ASTVisitor {
     @Override
     public Object visitAssignmentStatement(AssignmentStatement statementAssign, Object arg) throws PLCException {
        NameDef name = loopUpScope(statementAssign.getLv().getIdent().getName());
-       /* if(curr == 0)
-        name = symbolTable.lookup(statementAssign.getLv().getIdent().getName());
-        else name = symbolTable.lookup(statementAssign.getLv().getIdent().getName() +"_" +curr);
-*/
         boolean type = true;
        StringBuilder temp = new StringBuilder();
-       temp.append(statementAssign.getLv().visit(this,arg));
-       temp.append(" = ");
-       fromAssign = true;
+        fromAssign = true;
+
+/*
+
         if(statementAssign.getE().getType() != name.getType()) {
+            temp.append(statementAssign.getLv().visit(this,arg));
+            temp.append(" = ");
             if (appendType(name.getType()).equals("String"))
             {
                 temp.append("String.valueOf( ");
@@ -107,8 +106,108 @@ public class CodeGenerator implements ASTVisitor {
                 temp.append("(" + appendType(name.getType()) + ") ");
 
         }
-        if(statementAssign.getE() != null)
-        temp.append(statementAssign.getE().visit(this, arg));
+
+ */
+
+       switch(name.getType())
+       {
+           case PIXEL ->
+           {
+               if(statementAssign.getE() instanceof ExpandedPixelExpr)
+               {
+                   temp.append(statementAssign.getLv().visit(this,arg));
+                   temp.append(" = ");
+                   if(statementAssign.getE().getType() != name.getType())
+                   {
+                       if (appendType(name.getType()).equals("String"))
+                       {
+                           temp.append("String.valueOf( ");
+                           type = false;
+                       }
+                       else
+                           temp.append("(" + appendType(name.getType()) + ") ");
+
+                   }
+
+                   temp.append(statementAssign.getE().visit(this,arg));
+               }
+
+
+           }
+           case IMAGE ->
+           {
+               if(statementAssign.getLv().getPixelSelector() == null && statementAssign.getLv().getColor() == null )
+               {
+
+                   switch(statementAssign.getE().getType())
+                   {
+                       case STRING ->
+                       {
+
+
+                               temp.append("ImageOps.copyInto(FileURLIO.readImage(" + statementAssign.getE().visit(this,arg) +"),");
+                               temp.append(name.getIdent().getName() +")");
+
+
+                       }
+                       case IMAGE ->
+                       {
+
+
+                               temp.append("ImageOps.copyInto(" + statementAssign.getE().visit(this,arg) +",");
+                               temp.append(name.getIdent().getName() +")");
+
+                       }
+                       case PIXEL ->
+                       {
+
+                               temp.append("ImageOps.setAllPixels("+name.getIdent().getName()+",");
+                               temp.append(statementAssign.getE().visit(this,arg) +")");
+
+                       }
+                   }
+
+               }else if(statementAssign.getLv().getPixelSelector() != null && statementAssign.getLv().getColor() == null )
+               {
+                   temp.append("\nfor(int y = 0; y != "+name.getDimension().getWidth().visit(this,arg)+";y++){\n");
+                   temp.append("for(int x = 0; x != "+name.getDimension().getHeight().visit(this,arg)+";x++){\n");
+                   temp.append("ImageOps.setRGB(" + name.getIdent().getName()+"," +name.getDimension().visit(this,arg)+",");
+                   temp.append(statementAssign.getE().visit(this,arg));
+                   temp.append(");\n}\n}");
+
+               }else if(statementAssign.getLv().getPixelSelector() != null && statementAssign.getLv().getColor() != null )
+               {
+                   temp.append("\nfor(int y = 0; y != "+name.getDimension().getWidth().visit(this,arg)+";y++){\n");
+                   temp.append("for(int x = 0; x != "+name.getDimension().getHeight().visit(this,arg)+";x++){\n");
+                   temp.append("ImageOps.setRGB(" + name.getIdent().getName()+"," +name.getDimension().visit(this,arg)+",");
+                   temp.append("PixelOps.set"+ appendColor(statementAssign.getLv().getColor()) +"(");
+                   temp.append("ImageOps.getRGB("+name.getIdent().getName()+","+name.getDimension().visit(this,arg)+"),");
+                   temp.append(statementAssign.getE().visit(this,arg) +"));\n}\n}");
+               }
+           }
+           default ->
+           {
+               temp.append(statementAssign.getLv().visit(this,arg));
+               temp.append(" = ");
+               if(statementAssign.getE().getType() != name.getType())
+               {
+                   if (appendType(name.getType()).equals("String"))
+                   {
+                       temp.append("String.valueOf( ");
+                       type = false;
+                   }
+                   else
+                       temp.append("(" + appendType(name.getType()) + ") ");
+
+               }
+               temp.append(statementAssign.getE().visit(this, arg));
+
+           }
+       }
+
+
+        //if(statementAssign.getE() != null)
+       // temp.append(statementAssign.getE().visit(this, arg));
 
     if(type == false)
     {
@@ -124,84 +223,128 @@ fromAssign = false;
         IToken.Kind op = binaryExpr.getOp();
         Expr left = binaryExpr.getLeft();
         Expr right = binaryExpr.getRight();
-        temp.append("(");
 
 
 
-        switch(op)
+        switch (left.getType())
         {
-            case EXP ->
+            case IMAGE ->
             {
-
-                addVector("import java.lang.Math;");
-                temp.append("(int)Math.pow(" + (String)binaryExpr.getLeft().visit(this,arg) + ", " + (String)binaryExpr.getRight().visit(this,arg) + ")");
-
-                if(fromCond)
-                    temp.append(" != 0");
-            }
-            case GT,GE,LT,LE,EQ ->
-            {
-                if((fromDec || fromAssign || fromReturn) && !fromCond)
+                if(right.getType() == Type.IMAGE && validOP(binaryExpr.getOp()))
                 {
-
-
                     temp.append("(");
-                    temp.append((String) binaryExpr.getLeft().visit(this, arg));
-                    temp.append(appendKind(op));
-                    temp.append((String) binaryExpr.getRight().visit(this, arg));
-                    temp.append(") ? 1 : 0");
 
-                }
-                else
+                    temp.append("ImageOps.binaryImageImageOp(ImageOps.OP." + binaryExpr.getOp() + ",");
+                    temp.append(binaryExpr.getLeft().visit(this,arg) +",");
+                    temp.append(binaryExpr.getRight().visit(this,arg) +")");
+
+                    temp.append(")");
+                } else if (binaryExpr.getRight().getType() == Type.INT && validOP(binaryExpr.getOp()))
                 {
-                    temp.append((String) binaryExpr.getLeft().visit(this, arg));
-                    temp.append(appendKind(op));
-                    temp.append((String) binaryExpr.getRight().visit(this, arg));
+                    temp.append("(");
 
-                }
+                    temp.append("ImageOps.binaryImageScalarOp(ImageOps.OP." + binaryExpr.getOp() + ",");
+                    temp.append(binaryExpr.getLeft().visit(this,arg) +",");
+                    temp.append(binaryExpr.getRight().visit(this,arg) +")");
 
-            }
-            case OR,AND -> {
-                if (((fromDec || fromAssign || fromReturn ) && !fromCond))
-                {
-
-                    temp.append("((");
-                    temp.append((binaryExpr.getLeft().visit(this, arg)));
-                    temp.append(" != 0) " + appendKind(op));
-                    temp.append("("+ binaryExpr.getRight().visit(this,arg) +" != 0)");
-                    temp.append(") ? 1 : 0");
-
-
-                }else if(fromReturn && fromCond)
-                {
-
-                    temp.append("((");
-                    temp.append((binaryExpr.getLeft().visit(this, arg)));
-                    temp.append(" != 0) " + appendKind(op));
-                    temp.append("("+ binaryExpr.getRight().visit(this,arg) +" != 0)");
                     temp.append(")");
 
                 }
-                else
+
+            }
+            case PIXEL ->
+            {
+                if(binaryExpr.getRight().getType() == Type.PIXEL && validOP(binaryExpr.getOp()))
                 {
-                    temp.append((String) binaryExpr.getLeft().visit(this, arg));
-                    temp.append(appendKind(op));
-                    temp.append((String) binaryExpr.getRight().visit(this, arg));
+                    temp.append("(");
+
+                    temp.append("ImageOps.binaryPackedPixelPixelOp(ImageOps.OP." + binaryExpr.getOp() + ",");
+                    temp.append(binaryExpr.getLeft().visit(this,arg) +",");
+                    temp.append(binaryExpr.getRight().visit(this,arg) +")");
+
+                    temp.append(")");
+                }else if(binaryExpr.getRight().getType() == Type.INT && validOP(binaryExpr.getOp()))
+                {
+
+                    temp.append("(");
+
+                    temp.append("ImageOps.binaryPackedPixelIntOp(ImageOps.OP." + binaryExpr.getOp() + ",");
+                    temp.append(binaryExpr.getLeft().visit(this,arg) +",");
+                    temp.append(binaryExpr.getRight().visit(this,arg) +")");
+
+                    temp.append(")");
                 }
 
             }
             default ->
             {
-                temp.append((String) binaryExpr.getLeft().visit(this, arg));
-                temp.append(appendKind(op));
-                temp.append((String) binaryExpr.getRight().visit(this, arg));
+                temp.append("(");
 
+                switch (op) {
+                    case EXP -> {
+
+                        addVector("import java.lang.Math;");
+                        temp.append("(int)Math.pow(" + (String) binaryExpr.getLeft().visit(this, arg) + ", " + (String) binaryExpr.getRight().visit(this, arg) + ")");
+
+                        if (fromCond)
+                            temp.append(" != 0");
+                    }
+                    case GT, GE, LT, LE, EQ -> {
+                        if ((fromDec || fromAssign || fromReturn) && !fromCond) {
+
+
+                            temp.append("(");
+                            temp.append((String) binaryExpr.getLeft().visit(this, arg));
+                            temp.append(appendKind(op));
+                            temp.append((String) binaryExpr.getRight().visit(this, arg));
+                            temp.append(") ? 1 : 0");
+
+                        } else {
+                            temp.append((String) binaryExpr.getLeft().visit(this, arg));
+                            temp.append(appendKind(op));
+                            temp.append((String) binaryExpr.getRight().visit(this, arg));
+
+                        }
+
+                    }
+                    case OR, AND -> {
+                        if (((fromDec || fromAssign || fromReturn) && !fromCond)) {
+
+                            temp.append("((");
+                            temp.append((binaryExpr.getLeft().visit(this, arg)));
+                            temp.append(" != 0) " + appendKind(op));
+                            temp.append("(" + binaryExpr.getRight().visit(this, arg) + " != 0)");
+                            temp.append(") ? 1 : 0");
+
+
+                        } else if (fromReturn && fromCond) {
+
+                            temp.append("((");
+                            temp.append((binaryExpr.getLeft().visit(this, arg)));
+                            temp.append(" != 0) " + appendKind(op));
+                            temp.append("(" + binaryExpr.getRight().visit(this, arg) + " != 0)");
+                            temp.append(")");
+
+                        } else {
+                            temp.append((String) binaryExpr.getLeft().visit(this, arg));
+                            temp.append(appendKind(op));
+                            temp.append((String) binaryExpr.getRight().visit(this, arg));
+                        }
+
+                    }
+                    default -> {
+                        temp.append((String) binaryExpr.getLeft().visit(this, arg));
+                        temp.append(appendKind(op));
+                        temp.append((String) binaryExpr.getRight().visit(this, arg));
+
+                    }
+                }
+                temp.append(")");
             }
+
         }
 
 
-
-        temp.append(")");
         //does not include boolean thing
 
         return temp.toString();
@@ -259,8 +402,77 @@ fromAssign = false;
         fromDec = true;
 
 
+        if(declaration.getNameDef().getType() == Type.IMAGE)
+        {
+            temp.append(" = ");
 
-        if(declaration.getInitializer() != null)
+            if(declaration.getNameDef().getDimension() == null)
+            {
+                switch(declaration.getInitializer().getType())
+                {
+                    case STRING ->
+                    {
+
+                        temp.append("FileURLIO.readImage(");
+                        temp.append(declaration.getInitializer().visit(this,arg));
+                        temp.append(")");
+                    }
+                    case IMAGE ->
+                    {
+
+                        temp.append("ImageOps.cloneImage(");
+                        temp.append(declaration.getInitializer().visit(this,arg));
+                        temp.append(")");
+                    }
+                    default -> throw new PLCException("Code generation declaration error");
+                }
+            }else // if there is deminsion
+            {
+                if(declaration.getInitializer() == null)
+                {
+
+                    temp.append("ImageOps.makeImage(");
+                    temp.append(declaration.getNameDef().getDimension().visit(this,arg));
+                    temp.append(")");
+
+                }else//if there is initilizer
+                {
+                    switch(declaration.getInitializer().getType())
+                    {
+                        case STRING ->
+                        {
+
+                            temp.append("FileURLIO.readImage(");
+                            temp.append(declaration.getInitializer().visit(this,arg) +",");
+                            temp.append(declaration.getNameDef().getDimension().visit(this,arg));
+                            temp.append(")");
+                        }
+                        case IMAGE ->
+                        {
+
+                            temp.append("ImageOps.copyAndResize(");
+                            temp.append(declaration.getInitializer().visit(this,arg) +",");
+                            temp.append(declaration.getNameDef().getDimension().visit(this,arg));
+                            temp.append(")");
+                        }
+                        case PIXEL ->
+                        {
+
+                                temp.append("ImageOps.makeImage("+declaration.getNameDef().getDimension().visit(this,arg)+ ");\n");
+                                temp.append("ImageOps.setAllPixels("+declaration.getNameDef().getIdent().getName() +",");
+                                temp.append(declaration.getInitializer().visit(this,arg) +")");
+
+
+                        }
+                        default -> throw new PLCException("Code generation declaration error");
+                    }
+
+                }
+
+
+            }
+
+        }else if(declaration.getInitializer() != null )
         {
             temp.append(" = ");
             if(declaration.getInitializer().getType() != declaration.getNameDef().getType())
@@ -289,12 +501,24 @@ fromAssign = false;
 
     @Override
     public Object visitDimension(Dimension dimension, Object arg) throws PLCException {
-        return null;
+        StringBuilder temp = new StringBuilder();
+        temp.append(dimension.getWidth().visit(this,arg) +","+ dimension.getHeight().visit(this,arg));
+
+
+        return temp.toString();
     }
 
     @Override
     public Object visitExpandedPixelExpr(ExpandedPixelExpr expandedPixelExpr, Object arg) throws PLCException {
-        return null;
+        StringBuilder temp = new StringBuilder();
+
+
+        temp.append("PixelOps.pack(" + expandedPixelExpr.getRedExpr().visit(this,arg)+ ",");
+        temp.append(expandedPixelExpr.getGrnExpr().visit(this,arg) + ",");
+        temp.append(expandedPixelExpr.getBluExpr().visit(this,arg));
+        temp.append(")");
+
+        return temp.toString();
     }
 
     @Override
@@ -317,7 +541,7 @@ fromAssign = false;
         return temp.toString();
 
     }
-
+//remember reutnr statement adjustment of the else
     @Override
     public Object visitIdentExpr(IdentExpr identExpr, Object arg) throws PLCException {
 
@@ -370,17 +594,36 @@ fromAssign = false;
 
     @Override
     public Object visitPixelFuncExpr(PixelFuncExpr pixelFuncExpr, Object arg) throws PLCException {
+
+       //=== PA6 said not to implement ===//
         return null;
     }
 
     @Override
     public Object visitPixelSelector(PixelSelector pixelSelector, Object arg) throws PLCException {
-        return null;
+        StringBuilder temp = new StringBuilder();
+        temp.append(pixelSelector.getX().visit(this,arg)+","+pixelSelector.getY().visit(this,arg) );
+
+        return temp.toString();
     }
 
     @Override
     public Object visitPredeclaredVarExpr(PredeclaredVarExpr predeclaredVarExpr, Object arg) throws PLCException {
-        return null;
+       StringBuilder temp = new StringBuilder();
+        IToken.Kind kind = predeclaredVarExpr.getKind();
+       switch (kind)
+       {
+           case RES_y ->
+           {
+               temp.append("y");
+           }
+           case RES_x ->
+           {
+               temp.append("x");
+           }
+       }
+
+        return temp.toString();
     }
 
     @Override
@@ -455,24 +698,11 @@ fromAssign = false;
             {
                 type = false;
                 temp.append("String.valueOf(" );
+                temp.append(returnStatement. getE().visit(this,arg));
 
             } else
                 temp.append("(" + appendType(rootNode.getType()) + ") " + returnStatement.getE().visit(this, arg));
-        }
-/*
-        if(returnStatement.getE() instanceof BinaryExpr)
-        {
-            switch(((BinaryExpr) returnStatement.getE()).getOp())
-            {
-                case GT,GE,LT,LE,EQ,AND,OR ->
-                {
-                    temp.append(returnStatement.getE().visit(this, arg) + " ? 1 : 0");
-                }
-                default -> temp.append(returnStatement. getE().visit(this,arg));
-            }
         }else
-        */
-
             temp.append(returnStatement. getE().visit(this,arg));
 
         if(type == false)
@@ -491,12 +721,84 @@ fromAssign = false;
 
     @Override
     public Object visitUnaryExpr(UnaryExpr unaryExpr, Object arg) throws PLCException {
-        return null;
+
+        StringBuilder temp = new StringBuilder();
+
+        if(unaryExpr.getE().getType()==Type.INT) {
+            temp.append("(");
+            switch (unaryExpr.getOp()) {
+                case BANG ->
+                {
+                    temp.append(unaryExpr.getE().visit(this,arg));
+                    temp.append(" == 0 ? 1 :0");
+
+
+                }
+                case MINUS ->
+                {
+                    temp.append("-");
+                    temp.append(unaryExpr.getE().visit(this,arg));
+                }
+                default -> throw new PLCException("Error in unary:omitted sin cos ata aka dont use");
+
+            }
+            temp.append(")");
+        }
+
+
+        return temp.toString();
     }
 
     @Override
     public Object visitUnaryExprPostFix(UnaryExprPostfix unaryExprPostfix, Object arg) throws PLCException {
-        return null;
+        StringBuilder temp = new StringBuilder();
+
+        switch(unaryExprPostfix.getPrimary().getType())
+        {
+            case IMAGE ->
+            {
+                if(unaryExprPostfix.getPixel()!= null && unaryExprPostfix.getColor()== null)
+                {
+                    temp.append("ImageOps.getRGB(");
+                    temp.append(unaryExprPostfix.getPrimary().visit(this,arg) +",");
+                    temp.append(unaryExprPostfix.getPixel().visit(this,arg));
+                    temp.append(")");
+
+                }else if(unaryExprPostfix.getPixel()!= null && unaryExprPostfix.getColor()!= null)
+                {
+                    temp.append("PixelOps." + appendColor(unaryExprPostfix.getColor()).toLowerCase() + "(ImageOps.getRGB(");
+                    temp.append(unaryExprPostfix.getPrimary().visit(this,arg) +",");
+                    temp.append(unaryExprPostfix.getPixel().visit(this,arg));
+                    temp.append("))");
+
+                }else if(unaryExprPostfix.getPixel()== null && unaryExprPostfix.getColor()!= null)
+                {
+                    temp.append("ImageOps.extract" + appendColor(unaryExprPostfix.getColor()) + "(");
+                    temp.append(unaryExprPostfix.getPrimary().visit(this,arg));
+                    temp.append(")");
+
+                }
+
+            }
+            case PIXEL ->
+            {
+                if(unaryExprPostfix.getPixel()== null && unaryExprPostfix.getColor()!= null)
+                {
+                    temp.append("PixelOps." +appendColor(unaryExprPostfix.getColor()).toLowerCase()+"(");
+                    temp.append(unaryExprPostfix.getPrimary().visit(this,arg));
+                    temp.append(")");
+                }
+
+
+            }
+            default ->
+            {
+                temp.append(unaryExprPostfix.getPrimary().visit(this,arg));
+            }
+        }
+
+
+        return temp.toString();
     }
 
     @Override
@@ -533,6 +835,9 @@ fromAssign = false;
     public Object visitWriteStatement(WriteStatement statementWrite, Object arg) throws PLCException {
        StringBuilder temp = new StringBuilder();
        addVector("import edu.ufl.cise.plcsp23.runtime.ConsoleIO;");
+       if(statementWrite.getE().getType() == Type.PIXEL)
+           temp.append("ConsoleIO.writePixel("+statementWrite.getE().visit(this,arg)+")");
+       else
        temp.append("ConsoleIO.write(" +statementWrite.getE().visit(this,arg)+")");
 
         return temp.toString();
@@ -545,7 +850,7 @@ fromAssign = false;
     }
 
 
-    public static String appendType(Type type)
+    public String appendType(Type type)
     {
         StringBuilder toJava = new StringBuilder();
 
@@ -557,11 +862,19 @@ fromAssign = false;
             }
             case IMAGE->
             {
-                return null;
+                toJava.append("BufferedImage");
+                addVector("import java.awt.image.BufferedImage;");
+                addVector("import edu.ufl.cise.plcsp23.runtime.ImageOps;");
+                addVector("import edu.ufl.cise.plcsp23.runtime.PixelOps;");
+                addVector("import edu.ufl.cise.plcsp23.runtime.FileURLIO;");
             }
             case PIXEL ->
             {
-                return null;
+                toJava.append("int");
+                addVector("import java.awt.image.BufferedImage;");
+                addVector("import edu.ufl.cise.plcsp23.runtime.ImageOps;");
+                addVector("import edu.ufl.cise.plcsp23.runtime.PixelOps;");
+                addVector("import edu.ufl.cise.plcsp23.runtime.FileURLIO;");
             }
             case STRING ->
             {
@@ -577,6 +890,21 @@ fromAssign = false;
         return toJava.toString();
     }
 
+
+    public static Boolean validOP(IToken.Kind op)
+    {
+        switch (op)
+        {
+            case MOD,MINUS,PLUS, DIV,TIMES ->
+            {
+                return true;
+            }
+            default ->
+            {
+                return false;
+            }
+        }
+    }
 
     public static String appendKind(IToken.Kind kind)
     {
@@ -653,6 +981,30 @@ fromAssign = false;
             }
         }
         return toJava.toString();
+    }
+
+    public static String appendColor(ColorChannel color)  {
+
+        StringBuilder temp = new StringBuilder();
+        switch (color)
+        {
+            case blu ->
+            {
+             temp.append("Blu");
+            }
+            case grn ->
+            {
+                temp.append("Grn");
+            }
+            case red ->
+            {
+                temp.append("Red");
+            }
+            default -> temp.append("");
+        }
+
+    return temp.toString();
+
     }
 
 
