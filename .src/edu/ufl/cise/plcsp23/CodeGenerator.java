@@ -91,46 +91,23 @@ public class CodeGenerator implements ASTVisitor {
        StringBuilder temp = new StringBuilder();
         fromAssign = true;
 
-/*
-
-        if(statementAssign.getE().getType() != name.getType()) {
-            temp.append(statementAssign.getLv().visit(this,arg));
-            temp.append(" = ");
-            if (appendType(name.getType()).equals("String"))
-            {
-                temp.append("String.valueOf( ");
-                type = false;
-            }
-
-            else
-                temp.append("(" + appendType(name.getType()) + ") ");
-
-        }
-
- */
-
        switch(name.getType())
        {
            case PIXEL ->
            {
-               if(statementAssign.getE() instanceof ExpandedPixelExpr)
-               {
+
                    temp.append(statementAssign.getLv().visit(this,arg));
                    temp.append(" = ");
-                   if(statementAssign.getE().getType() != name.getType())
-                   {
-                       if (appendType(name.getType()).equals("String"))
-                       {
+                   if(statementAssign.getE().getType() != name.getType()) {
+                       if (appendType(name.getType()).equals("String")) {
                            temp.append("String.valueOf( ");
                            type = false;
-                       }
-                       else
+                       } else
                            temp.append("(" + appendType(name.getType()) + ") ");
 
-                   }
-
+                   }else
                    temp.append(statementAssign.getE().visit(this,arg));
-               }
+
 
 
            }
@@ -169,19 +146,19 @@ public class CodeGenerator implements ASTVisitor {
 
                }else if(statementAssign.getLv().getPixelSelector() != null && statementAssign.getLv().getColor() == null )
                {
-                   temp.append("\nfor(int y = 0; y != "+name.getDimension().getWidth().visit(this,arg)+";y++){\n");
-                   temp.append("for(int x = 0; x != "+name.getDimension().getHeight().visit(this,arg)+";x++){\n");
-                   temp.append("ImageOps.setRGB(" + name.getIdent().getName()+"," +name.getDimension().visit(this,arg)+",");
+                   temp.append("\nfor(int y = 0; y != "+statementAssign.getLv().getIdent().visit(this,arg)+".getHeight();y++){\n");
+                   temp.append("for(int x = 0; x != "+statementAssign.getLv().getIdent().visit(this,arg)+".getWidth();x++){\n");
+                   temp.append("ImageOps.setRGB(" + name.getIdent().getName()+"," +statementAssign.getLv().getPixelSelector().visit(this,arg)+",");
                    temp.append(statementAssign.getE().visit(this,arg));
                    temp.append(");\n}\n}");
 
                }else if(statementAssign.getLv().getPixelSelector() != null && statementAssign.getLv().getColor() != null )
                {
-                   temp.append("\nfor(int y = 0; y != "+name.getDimension().getWidth().visit(this,arg)+";y++){\n");
-                   temp.append("for(int x = 0; x != "+name.getDimension().getHeight().visit(this,arg)+";x++){\n");
-                   temp.append("ImageOps.setRGB(" + name.getIdent().getName()+"," +name.getDimension().visit(this,arg)+",");
+                   temp.append("\nfor(int y = 0; y != "+statementAssign.getLv().getIdent().visit(this,arg)+".getHeight();y++){\n");
+                   temp.append("for(int x = 0; x != "+statementAssign.getLv().getIdent().visit(this,arg)+".getWidth();x++){\n");
+                   temp.append("ImageOps.setRGB(" + name.getIdent().getName()+"," +statementAssign.getLv().getPixelSelector().visit(this,arg)+",");
                    temp.append("PixelOps.set"+ appendColor(statementAssign.getLv().getColor()) +"(");
-                   temp.append("ImageOps.getRGB("+name.getIdent().getName()+","+name.getDimension().visit(this,arg)+"),");
+                   temp.append("ImageOps.getRGB("+name.getIdent().getName()+","+statementAssign.getLv().getPixelSelector().visit(this,arg)+"),");
                    temp.append(statementAssign.getE().visit(this,arg) +"));\n}\n}");
                }
            }
